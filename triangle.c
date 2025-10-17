@@ -97,6 +97,7 @@ void make_first_triangle_sphere(void)
 
 void make_inital_sphere_on_z(void)
 {
+    /*
     vec4 p[36] = {{1,0,0,1}};
     for(int i = 0; i < 36; i++)
     {
@@ -107,14 +108,16 @@ void make_inital_sphere_on_z(void)
     {
         p[i] = matrix_vector_multi(m1, p[i]);
     }
-    int translate1 = 0.6;
+    */
+    int translate1 = 0.3;
     mat4 m = matrix_translation(translate1, 0, 0.0);
     int vert = 0;
     for(int i = 0; i < 36; i++)
     {
-        vec4 p_prime = matrix_vector_multi(rotate_x(-10), p[i]);
-        vec4 p2 = matrix_vector_multi(rotate_y(10), p[i]);
-        vec4 p3 = matrix_vector_multi(rotate_y(10), p_prime);
+        vec4 p = {0,0,1,1};
+        vec4 p_prime = matrix_vector_multi(rotate_x(-10*i), p);
+        vec4 p2 = matrix_vector_multi(rotate_y(10*i), p);
+        vec4 p3 = matrix_vector_multi(rotate_y(10*i), p_prime);
         // flips
         if(i > 18)
         {
@@ -122,10 +125,10 @@ void make_inital_sphere_on_z(void)
         }
        
         vertices[vert] = matrix_vector_multi(m, p_prime);
-        vertices[vert+1] = matrix_vector_multi(m,p[i]);
+        vertices[vert+1] = matrix_vector_multi(m,p);
         vertices[vert+2] = matrix_vector_multi(m,p2);
         vertices[vert+3] = matrix_vector_multi(m,p3);
-        vertices[vert+4] = matrix_vector_multi(m,p_prime);
+        vertices[vert+4] = matrix_vector_multi(m,p);
         vertices[vert+5] = matrix_vector_multi(m,p2);
 
 
