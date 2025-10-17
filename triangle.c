@@ -95,9 +95,10 @@ void make_first_triangle_sphere(void)
     colors[5] = (vec4){0.0, 0.0, 1.0, 1.0};	// blue
 }
 
+/*
 void make_inital_sphere_on_z(void)
 {
-    /*
+    
     vec4 p[36] = {{1,0,0,1}};
     for(int i = 0; i < 36; i++)
     {
@@ -108,29 +109,31 @@ void make_inital_sphere_on_z(void)
     {
         p[i] = matrix_vector_multi(m1, p[i]);
     }
-    */
-    int translate1 = 0.3;
-    mat4 m = matrix_translation(translate1, 0, 0.0);
+    
     int vert = 0;
+    int new_i = 0;
     for(int i = 0; i < 36; i++)
     {
-        vec4 p = {0,0,1,1};
-        vec4 p_prime = matrix_vector_multi(rotate_x(-10*i), p);
+        vec4 p = {0,-1,1,1};
+        vec4 p_prime;
+        if(i < 8)
+        {
+            p_prime = matrix_vector_multi(rotate_x(-80+(i*10)), p);
+        }
         vec4 p2 = matrix_vector_multi(rotate_y(10*i), p);
         vec4 p3 = matrix_vector_multi(rotate_y(10*i), p_prime);
         // flips
-        if(i > 18)
+        if(i > 8)
         {
-            m = matrix_translation(-translate1, 0, 0.0);
+            p_prime = matrix_vector_multi(rotate_x(10+(new_i*10)), p);
         }
        
-        vertices[vert] = matrix_vector_multi(m, p_prime);
-        vertices[vert+1] = matrix_vector_multi(m,p);
-        vertices[vert+2] = matrix_vector_multi(m,p2);
-        vertices[vert+3] = matrix_vector_multi(m,p3);
-        vertices[vert+4] = matrix_vector_multi(m,p);
-        vertices[vert+5] = matrix_vector_multi(m,p2);
-
+        vertices[vert] = p_prime;
+        vertices[vert+1] = p;
+        vertices[vert+2] = p2;
+        vertices[vert+3] = p3;
+        vertices[vert+4] = p;
+        vertices[vert+5] = p2;
 
         int random1 = 1 + rand() %10; // make random number between 1 and 10
         int random2 = 1 + rand() %10; // make random number between 1 and 10
@@ -146,25 +149,60 @@ void make_inital_sphere_on_z(void)
         colors[vert+5] = random_color2;
 
         vert = vert + 6;
-        //translate1 = translate1 + 0.125;
     }
 }
+*/
 
-void create_above_and_below_spehre_center(void)
+void make_inital_sphere_on_z(void)
 {
-    int numBands = 16;           // number of bands above/below equator
-    int tilesPerRing = 32;       // 32 tiles per ring (2 triangles each)
-    float deltaAngle = 90.0f / numBands;  // tilt per band in degrees
-    int baseVerticesCount = 6;   // 2 triangles per tile
-    int vertOffset = 32 * baseVerticesCount;     // start after equator ring
+    int vert = 0;
+    vec4 base = (vec4){0, -1, 0, 1};   // start at bottom of sphere (on -y axis)
 
-    // store original base tile vertices
-    vec4 baseTile[6];
-    for (int i = 0; i < baseVerticesCount; i++)
+    // latitudes: -80 to +70 (15 steps of 10)
+    for(int lat = 0; lat < 15; lat++)
     {
-        baseTile[i] = vertices[i];    // original square tile
+        float x1 = -80 + lat * 10;   // current band
+        float x2 = x1 + 10;          // next band
+
+        // longitudes: 0 to 350 (36 steps of 10)
+        for(int lon = 0; lon < 36; lon++)
+        {
+            float y1 = lon * 10;
+            float y2 = y1 + 10;
+
+            // 4 corner points of the rectangular patch (quad)
+            vec4 p1 = matrix_vector_multi(rotate_y(y1), matrix_vector_multi(rotate_x(x1), base));
+            vec4 p2 = matrix_vector_multi(rotate_y(y1), matrix_vector_multi(rotate_x(x2), base));
+            vec4 p3 = matrix_vector_multi(rotate_y(y2), matrix_vector_multi(rotate_x(x2), base));
+            vec4 p4 = matrix_vector_multi(rotate_y(y2), matrix_vector_multi(rotate_x(x1), base));
+
+            // 1st triangle p1, p2, p3
+            vertices[vert]   = p1;
+            vertices[vert+1] = p2;
+            vertices[vert+2] = p3;
+
+            // 2nd triangle p1, p3, p4
+            vertices[vert+3] = p1;
+            vertices[vert+4] = p3;
+            vertices[vert+5] = p4;
+
+            // random colors
+            int random1 = 1 + rand() % 10;
+            int random2 = 1 + rand() % 10;
+
+            vec4 color1 = pick_color(random1);
+            vec4 color2 = pick_color(random2);
+
+            colors[vert]   = color1;
+            colors[vert+1] = color1;
+            colors[vert+2] = color1;
+            colors[vert+3] = color2;
+            colors[vert+4] = color2;
+            colors[vert+5] = color2;
+
+            vert += 6;
+        }
     }
-    
 }
 
 void make_Sphere(void)
@@ -174,7 +212,6 @@ void make_Sphere(void)
 
     //make_first_triangle_sphere();
     make_inital_sphere_on_z();
-    //create_above_and_below_spehre_center();
 }
 
 void init(void)
