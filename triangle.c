@@ -24,18 +24,19 @@
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
+#include <math.h>
 
 #define BUFFER_OFFSET( offset )   ((GLvoid*) (offset))
 
 
 
-vec4 vertices[1000] =
+vec4 vertices[100000] =
 {{ 0.0,  0.5,  0.0, 1.0},	// top
  {-0.5, -0.5,  0.0, 1.0},	// bottom left
  { 0.5, -0.5,  0.0, 1.0},	// bottom right
  };	
 
-vec4 colors[1000] =
+vec4 colors[100000] =
 {{1.0, 0.0, 0.0, 1.0},	// red   (for top)
  {0.0, 1.0, 0.0, 1.0},	// green (for bottom left)
  {0.0, 0.0, 1.0, 1.0},	// blue  (for bottom right)
@@ -85,11 +86,7 @@ void make_first_triangle_sphere(void)
     vertices[3] = (vec4){0.0625,0.0625,0.0,1.0};  // top right
     vertices[4] = (vec4){-0.0625,0.0625,0.0,1.0};  // top left
     vertices[5] = (vec4){0.0625,-0.0625,0.0,1.0};  // bottom right
-    mat4 S = matrix_scaling(1.0, 1.7, 1.0);
-    for (int i = 0; i < 6; i++)
-    {
-        vertices[i] = matrix_vector_multi(S, vertices[i]);
-    }
+
     colors[0] = (vec4){1.0, 0.0, 0.0, 1.0}; // red
     colors[1] = (vec4){1.0, 0.0, 0.0, 1.0}; // red
     colors[2] = (vec4){1.0, 0.0, 0.0, 1.0}; // red
@@ -98,41 +95,39 @@ void make_first_triangle_sphere(void)
     colors[5] = (vec4){0.0, 0.0, 1.0, 1.0};	// blue
 }
 
-void rotate_z_sphere(void)
+void make_inital_sphere_on_z(void)
 {
-    // base triangle (copy original vertices)
-    vec4 base0 = vertices[0];
-    vec4 base1 = vertices[1];
-    vec4 base2 = vertices[2];
-    vec4 base3 = vertices[3];
-    vec4 base4 = vertices[4];
-    vec4 base5 = vertices[5];
-
-    float translate1 = 0.125;
-    int vert = 0;
-    for(int i = 0; i < 32; i++)
+    vec4 p[36] = {{1,0,0,1}};
+    for(int i = 0; i < 36; i++)
     {
-        mat4 m = matrix_translation(1, 0.0, 0.0);
-        mat4 m_r = rotate_z(11.25*i);
-        mat4 m_d = matrix_multi(m_r, m);
+        p[i] = matrix_vector_multi(rotate_z(10), p[i]);
+    }
+    mat4 m1 = matrix_scaling(0.3,0.3,1);
+    for(int i = 0; i < 36; i++)
+    {
+        p[i] = matrix_vector_multi(m1, p[i]);
+    }
+    int translate1 = 0.6;
+    mat4 m = matrix_translation(translate1, 0, 0.0);
+    int vert = 0;
+    for(int i = 0; i < 36; i++)
+    {
+        vec4 p_prime = matrix_vector_multi(rotate_x(-10), p[i]);
+        vec4 p2 = matrix_vector_multi(rotate_y(10), p[i]);
+        vec4 p3 = matrix_vector_multi(rotate_y(10), p_prime);
+        // flips
+        if(i > 18)
+        {
+            m = matrix_translation(-translate1, 0, 0.0);
+        }
+       
+        vertices[vert] = matrix_vector_multi(m, p_prime);
+        vertices[vert+1] = matrix_vector_multi(m,p[i]);
+        vertices[vert+2] = matrix_vector_multi(m,p2);
+        vertices[vert+3] = matrix_vector_multi(m,p3);
+        vertices[vert+4] = matrix_vector_multi(m,p_prime);
+        vertices[vert+5] = matrix_vector_multi(m,p2);
 
-        //vertices[vert] = matrix_vector_multi(m, vertices[0]);
-        vertices[vert] = matrix_vector_multi(m_d, base0);
-
-        //vertices[vert+1] = matrix_vector_multi(m, vertices[1]);
-        vertices[vert+1] = matrix_vector_multi(m_d, base1);
-
-        //vertices[vert+2] = matrix_vector_multi(m, vertices[2]);
-        vertices[vert+2] = matrix_vector_multi(m_d, base2);
-
-        //vertices[vert+3] = matrix_vector_multi(m, vertices[3]);
-        vertices[vert+3] = matrix_vector_multi(m_d, base3);
-
-        //vertices[vert+4] = matrix_vector_multi(m, vertices[4]);
-        vertices[vert+4] = matrix_vector_multi(m_d, base4);
-
-        //vertices[vert+5] = matrix_vector_multi(m, vertices[5]);
-        vertices[vert+5] = matrix_vector_multi(m_d, base5);
 
         int random1 = 1 + rand() %10; // make random number between 1 and 10
         int random2 = 1 + rand() %10; // make random number between 1 and 10
@@ -148,8 +143,25 @@ void rotate_z_sphere(void)
         colors[vert+5] = random_color2;
 
         vert = vert + 6;
-        translate1 = translate1 + 0.125;
+        //translate1 = translate1 + 0.125;
     }
+}
+
+void create_above_and_below_spehre_center(void)
+{
+    int numBands = 16;           // number of bands above/below equator
+    int tilesPerRing = 32;       // 32 tiles per ring (2 triangles each)
+    float deltaAngle = 90.0f / numBands;  // tilt per band in degrees
+    int baseVerticesCount = 6;   // 2 triangles per tile
+    int vertOffset = 32 * baseVerticesCount;     // start after equator ring
+
+    // store original base tile vertices
+    vec4 baseTile[6];
+    for (int i = 0; i < baseVerticesCount; i++)
+    {
+        baseTile[i] = vertices[i];    // original square tile
+    }
+    
 }
 
 void make_Sphere(void)
@@ -157,8 +169,9 @@ void make_Sphere(void)
     int random = 1 + rand() %10; // make random number between 1 and 10
     vec4 random_color = pick_color(random);
 
-    make_first_triangle_sphere();
-    rotate_z_sphere();
+    //make_first_triangle_sphere();
+    make_inital_sphere_on_z();
+    //create_above_and_below_spehre_center();
 }
 
 void init(void)
