@@ -33,9 +33,6 @@ vec4 vertices[6] =
 {{ 0.0,  0.5,  0.0, 1.0},	// top
  {-0.5, -0.5,  0.0, 1.0},	// bottom left
  { 0.5, -0.5,  0.0, 1.0},	// bottom right
- { 0.5,  0.8,  -0.5, 1.0},	// top
- {0.9, 0.0,  -0.5, 1.0},	// bottom left
- { 0.1, 0.0,  -0.5, 1.0},	// bottom right
  };	
 
 vec4 colors[6] =
@@ -52,6 +49,55 @@ int num_vertices = 6;
 mat4 my_ctm = {{1,0,0,0},{0,1,0,0}, {0,0,1,0}, {0,0,0,1}};
 GLuint ctm_location;
 
+vec4 pick_color(int random_num)
+{
+
+    // red
+    if(random_num <= 2)
+    {
+        return (vec4){1.0, 0.0, 0.0, 1.0};
+        
+    }
+    // green
+    else if(random_num <= 5)
+    {
+        return (vec4){0.0, 1.0, 0.0, 1.0};
+    }
+    // blue
+    else if(random_num <= 7)
+    {
+        return (vec4){0.0, 0.0, 1.0, 1.0};
+    }
+    // yellow
+    else if(random_num <= 9)
+    {
+        return (vec4){1.0, 1.0, 0.0, 1.0};
+    }
+    // cyan
+    else if(random_num <= 10)
+    {
+        return (vec4){0.0, 1.0, 1.0, 0.5};
+    }
+}
+
+void make_first_triangle_sphere(void)
+{
+    vertices[0] = (vec4){-0.0625,0.0625,0.0,1.0};  // top
+    vertices[1] = (vec4){-0.0625,-0.0625,0.0,1.0};  // bottom left
+    vertices[2] = (vec4){0.0625,-0.0625,0.0,1.0};  // bottom right
+    colors[0] = (vec4){1.0, 0.0, 0.0, 1.0}; // red
+    colors[1] = (vec4){1.0, 0.0, 0.0, 1.0}; // red
+    colors[2] = (vec4){1.0, 0.0, 0.0, 1.0}; // red
+}
+
+void make_Sphere(void)
+{
+    int random = 1 + rand() %10; // make random number between 1 and 10
+    vec4 random_color = pick_color(random);
+
+    make_first_triangle_sphere();
+
+}
 
 void init(void)
 {
@@ -201,13 +247,16 @@ int main(int argc, char **argv)
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
     glutInitWindowSize(800, 800);
     glutInitWindowPosition(100,100);
-    glutCreateWindow("Triangle");
+    glutCreateWindow("Project 1");
+
+    make_Sphere();
+
     glewInit();
     init();
     glutDisplayFunc(display);
     glutKeyboardFunc(keyboard);
-    glutMouseFunc(mouse);
-    glutMotionFunc(motion);
+    //glutMouseFunc(mouse);
+    //glutMotionFunc(motion);
     glutMainLoop();
 
     return 0;
