@@ -29,22 +29,19 @@
 
 
 
-vec4 vertices[6] =
+vec4 vertices[1000] =
 {{ 0.0,  0.5,  0.0, 1.0},	// top
  {-0.5, -0.5,  0.0, 1.0},	// bottom left
  { 0.5, -0.5,  0.0, 1.0},	// bottom right
  };	
 
-vec4 colors[6] =
+vec4 colors[1000] =
 {{1.0, 0.0, 0.0, 1.0},	// red   (for top)
  {0.0, 1.0, 0.0, 1.0},	// green (for bottom left)
  {0.0, 0.0, 1.0, 1.0},	// blue  (for bottom right)
- {0.0, 1.0, 0.0, 1.0},	// blue
- {0.0, 1.0, 0.0, 1.0},	// blue
- {0.0, 1.0, 0.0, 1.0},	// blue  
  };	
 
-int num_vertices = 6;
+int num_vertices = 1000;
 
 mat4 my_ctm = {{1,0,0,0},{0,1,0,0}, {0,0,1,0}, {0,0,0,1}};
 GLuint ctm_location;
@@ -85,9 +82,74 @@ void make_first_triangle_sphere(void)
     vertices[0] = (vec4){-0.0625,0.0625,0.0,1.0};  // top
     vertices[1] = (vec4){-0.0625,-0.0625,0.0,1.0};  // bottom left
     vertices[2] = (vec4){0.0625,-0.0625,0.0,1.0};  // bottom right
+    vertices[3] = (vec4){0.0625,0.0625,0.0,1.0};  // top right
+    vertices[4] = (vec4){-0.0625,0.0625,0.0,1.0};  // top left
+    vertices[5] = (vec4){0.0625,-0.0625,0.0,1.0};  // bottom right
+    mat4 S = matrix_scaling(1.0, 1.7, 1.0);
+    for (int i = 0; i < 6; i++)
+    {
+        vertices[i] = matrix_vector_multi(S, vertices[i]);
+    }
     colors[0] = (vec4){1.0, 0.0, 0.0, 1.0}; // red
     colors[1] = (vec4){1.0, 0.0, 0.0, 1.0}; // red
     colors[2] = (vec4){1.0, 0.0, 0.0, 1.0}; // red
+    colors[3] = (vec4){0.0, 0.0, 1.0, 1.0};	// blue
+    colors[4] = (vec4){0.0, 0.0, 1.0, 1.0};	// blue
+    colors[5] = (vec4){0.0, 0.0, 1.0, 1.0};	// blue
+}
+
+void rotate_z_sphere(void)
+{
+    // base triangle (copy original vertices)
+    vec4 base0 = vertices[0];
+    vec4 base1 = vertices[1];
+    vec4 base2 = vertices[2];
+    vec4 base3 = vertices[3];
+    vec4 base4 = vertices[4];
+    vec4 base5 = vertices[5];
+
+    float translate1 = 0.125;
+    int vert = 0;
+    for(int i = 0; i < 32; i++)
+    {
+        mat4 m = matrix_translation(1, 0.0, 0.0);
+        mat4 m_r = rotate_z(11.25*i);
+        mat4 m_d = matrix_multi(m_r, m);
+
+        //vertices[vert] = matrix_vector_multi(m, vertices[0]);
+        vertices[vert] = matrix_vector_multi(m_d, base0);
+
+        //vertices[vert+1] = matrix_vector_multi(m, vertices[1]);
+        vertices[vert+1] = matrix_vector_multi(m_d, base1);
+
+        //vertices[vert+2] = matrix_vector_multi(m, vertices[2]);
+        vertices[vert+2] = matrix_vector_multi(m_d, base2);
+
+        //vertices[vert+3] = matrix_vector_multi(m, vertices[3]);
+        vertices[vert+3] = matrix_vector_multi(m_d, base3);
+
+        //vertices[vert+4] = matrix_vector_multi(m, vertices[4]);
+        vertices[vert+4] = matrix_vector_multi(m_d, base4);
+
+        //vertices[vert+5] = matrix_vector_multi(m, vertices[5]);
+        vertices[vert+5] = matrix_vector_multi(m_d, base5);
+
+        int random1 = 1 + rand() %10; // make random number between 1 and 10
+        int random2 = 1 + rand() %10; // make random number between 1 and 10
+
+        vec4 random_color1 = pick_color(random1);
+        vec4 random_color2 = pick_color(random2);
+
+        colors[vert] = random_color1;
+        colors[vert+1] = random_color1;
+        colors[vert+2] = random_color1;
+        colors[vert+3] = random_color2;
+        colors[vert+4] = random_color2;
+        colors[vert+5] = random_color2;
+
+        vert = vert + 6;
+        translate1 = translate1 + 0.125;
+    }
 }
 
 void make_Sphere(void)
@@ -96,7 +158,7 @@ void make_Sphere(void)
     vec4 random_color = pick_color(random);
 
     make_first_triangle_sphere();
-
+    rotate_z_sphere();
 }
 
 void init(void)
@@ -146,7 +208,7 @@ void display(void)
 
     glUniformMatrix4fv(ctm_location, 1, GL_FALSE, (GLfloat *) &my_ctm);
 
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glDrawArrays(GL_TRIANGLES, 0, num_vertices);
     /*
     my_ctm = identity();
     glUniformMatrix4fv(ctm_location, 1, GL_FALSE, (GLfloat *) &my_ctm);
