@@ -353,8 +353,20 @@ void keyboard(unsigned char key, int mousex, int mousey)
 {
     if(key == 'q')
     	glutLeaveMainLoop();
-
-    //glutPostRedisplay();
+    if(key == '1')
+        make_Sphere();
+        glewInit();
+        init();
+    if(key == '2')
+        make_donut();
+        glewInit();
+        init();
+    if(key == '3')
+        make_spring();
+        glewInit();
+        init();
+        
+    glutPostRedisplay();
 }
 
 int mouseDown = 0;
@@ -443,7 +455,7 @@ int main(int argc, char **argv)
 
     //make_Sphere();
     //make_donut();
-    make_spring();
+    //make_spring();
 
     glewInit();
     init();
