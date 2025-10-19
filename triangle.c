@@ -21,6 +21,7 @@
 
 #include "initShader.h"
 #include "myLib.h"
+#include "stl_reader.h"
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
@@ -46,6 +47,9 @@ int num_vertices = 100000;
 
 mat4 my_ctm = {{1,0,0,0},{0,1,0,0}, {0,0,1,0}, {0,0,0,1}};
 GLuint ctm_location;
+GLuint program;
+GLuint vbo;
+int stl_value = 0;
 
 vec4 pick_color(int random_num)
 {
@@ -291,28 +295,40 @@ void make_spring(void)
     num_vertices = vert;
 }
 
+void draw_stl(void)
+{
+    stl_value = 1;
+}
+
+void update_vertex_buffer()
+{
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    if(stl_value == 1) 
+    {
+        Mesh mesh = read_stl_binary("Little-darth-vader.STL");
+        normalize_mesh(&mesh);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vec4) * mesh.num_vertices * 2, NULL, GL_STATIC_DRAW);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vec4) * mesh.num_vertices, mesh.vertices);
+        glBufferSubData(GL_ARRAY_BUFFER, sizeof(vec4) * mesh.num_vertices, sizeof(vec4) * mesh.num_vertices, mesh.colors);
+    } 
+    else 
+    {
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices) + sizeof(colors), NULL, GL_STATIC_DRAW);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+        glBufferSubData(GL_ARRAY_BUFFER, sizeof(vertices), sizeof(colors), colors);
+    }
+}
+
 void init(void)
 {
-    /*     example
-    mat4 m = matrix_multi(matrix_translation(0.2, -0.4, 0.0), matrix_scaling(1.5, 1.5, 1.5));
-    vertices[0] = matrix_vector_multi(m, vertices[0]);
-    vertices[1] = matrix_vector_multi(m, vertices[1]);
-    vertices[2] = matrix_vector_multi(m, vertices[2]);
-    */ 
 
     GLuint program = initShader("vshader.glsl", "fshader.glsl");
     glUseProgram(program);
 
-    GLuint vao;
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-
-    GLuint buffer;
-    glGenBuffers(1, &buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, buffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices) + sizeof(colors), NULL, GL_STATIC_DRAW);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
-    glBufferSubData(GL_ARRAY_BUFFER, sizeof(vertices), sizeof(colors), colors);
+    // Single VBO
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    //glBufferData(GL_ARRAY_BUFFER, sizeof(vertices) + sizeof(colors), NULL, GL_STATIC_DRAW);
 
     GLuint vPosition = glGetAttribLocation(program, "vPosition");
     glEnableVertexAttribArray(vPosition);
@@ -351,21 +367,36 @@ void display(void)
 
 void keyboard(unsigned char key, int mousex, int mousey)
 {
-    if(key == 'q')
-    	glutLeaveMainLoop();
-    if(key == '1')
-        make_Sphere();
-        glewInit();
-        init();
-    if(key == '2')
-        make_donut();
-        glewInit();
-        init();
-    if(key == '3')
-        make_spring();
-        glewInit();
-        init();
-        
+    switch(key)
+    {
+        case 'q':
+            glutLeaveMainLoop();
+            break;
+
+        case '1': // Sphere
+            stl_value = 0;
+            make_Sphere();
+            update_vertex_buffer();
+            break;
+
+        case '2': // Donut
+            stl_value = 0;
+            make_donut();
+            update_vertex_buffer();
+            break;
+
+        case '3': // Spring
+            stl_value = 0;
+            make_spring();
+            update_vertex_buffer();
+            break;
+
+        case '4': // STL
+            stl_value = 1;
+            update_vertex_buffer();
+            break;
+    }
+   
     glutPostRedisplay();
 }
 
@@ -452,10 +483,6 @@ int main(int argc, char **argv)
     glutInitWindowSize(800, 800);
     glutInitWindowPosition(100,100);
     glutCreateWindow("Project 1");
-
-    //make_Sphere();
-    //make_donut();
-    //make_spring();
 
     glewInit();
     init();
