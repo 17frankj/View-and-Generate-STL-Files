@@ -30,19 +30,19 @@
 
 
 
-vec4 vertices[100000] =
+vec4 vertices[1000000] =
 {{ 0.0,  0.5,  0.0, 1.0},	// top
  {-0.5, -0.5,  0.0, 1.0},	// bottom left
  { 0.5, -0.5,  0.0, 1.0},	// bottom right
  };	
 
-vec4 colors[100000] =
+vec4 colors[1000000] =
 {{1.0, 0.0, 0.0, 1.0},	// red   (for top)
  {0.0, 1.0, 0.0, 1.0},	// green (for bottom left)
  {0.0, 0.0, 1.0, 1.0},	// blue  (for bottom right)
  };	
 
-int num_vertices = 1000;
+int num_vertices = 100000;
 
 mat4 my_ctm = {{1,0,0,0},{0,1,0,0}, {0,0,1,0}, {0,0,0,1}};
 GLuint ctm_location;
@@ -158,14 +158,17 @@ void make_inital_sphere_on_z(void)
     int vert = 0;
     vec4 base = (vec4){0, -1, 0, 1};   // start at bottom of sphere (on -y axis)
 
+    int lat_steps = 36;  // full sphere from -90 to +90 in 10° increments
+    int lon_steps = 36;  // full 360° in 10° increments
+
     // latitudes: -80 to +70 (15 steps of 10)
-    for(int lat = 0; lat < 15; lat++)
+    for(int lat = 0; lat < lat_steps; lat++)
     {
         float x1 = -80 + lat * 10;   // current band
         float x2 = x1 + 10;          // next band
 
         // longitudes: 0 to 350 (36 steps of 10)
-        for(int lon = 0; lon < 36; lon++)
+        for(int lon = 0; lon < lon_steps; lon++)
         {
             float y1 = lon * 10;
             float y2 = y1 + 10;
@@ -203,6 +206,7 @@ void make_inital_sphere_on_z(void)
             vert += 6;
         }
     }
+    num_vertices = vert; // update total number of vertices
 }
 
 void make_Sphere(void)
