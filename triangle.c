@@ -95,64 +95,6 @@ void make_first_triangle_sphere(void)
     colors[5] = (vec4){0.0, 0.0, 1.0, 1.0};	// blue
 }
 
-/*
-void make_inital_sphere_on_z(void)
-{
-    
-    vec4 p[36] = {{1,0,0,1}};
-    for(int i = 0; i < 36; i++)
-    {
-        p[i] = matrix_vector_multi(rotate_z(10), p[i]);
-    }
-    mat4 m1 = matrix_scaling(0.3,0.3,1);
-    for(int i = 0; i < 36; i++)
-    {
-        p[i] = matrix_vector_multi(m1, p[i]);
-    }
-    
-    int vert = 0;
-    int new_i = 0;
-    for(int i = 0; i < 36; i++)
-    {
-        vec4 p = {0,-1,1,1};
-        vec4 p_prime;
-        if(i < 8)
-        {
-            p_prime = matrix_vector_multi(rotate_x(-80+(i*10)), p);
-        }
-        vec4 p2 = matrix_vector_multi(rotate_y(10*i), p);
-        vec4 p3 = matrix_vector_multi(rotate_y(10*i), p_prime);
-        // flips
-        if(i > 8)
-        {
-            p_prime = matrix_vector_multi(rotate_x(10+(new_i*10)), p);
-        }
-       
-        vertices[vert] = p_prime;
-        vertices[vert+1] = p;
-        vertices[vert+2] = p2;
-        vertices[vert+3] = p3;
-        vertices[vert+4] = p;
-        vertices[vert+5] = p2;
-
-        int random1 = 1 + rand() %10; // make random number between 1 and 10
-        int random2 = 1 + rand() %10; // make random number between 1 and 10
-
-        vec4 random_color1 = pick_color(random1);
-        vec4 random_color2 = pick_color(random2);
-
-        colors[vert] = random_color1;
-        colors[vert+1] = random_color1;
-        colors[vert+2] = random_color1;
-        colors[vert+3] = random_color2;
-        colors[vert+4] = random_color2;
-        colors[vert+5] = random_color2;
-
-        vert = vert + 6;
-    }
-}
-*/
-
 void make_inital_sphere_on_z(void)
 {
     int vert = 0;
@@ -214,8 +156,139 @@ void make_Sphere(void)
     int random = 1 + rand() %10; // make random number between 1 and 10
     vec4 random_color = pick_color(random);
 
-    //make_first_triangle_sphere();
     make_inital_sphere_on_z();
+}
+
+void make_donut(void)
+{
+    int random = 1 + rand() %10; // make random number between 1 and 10
+    vec4 random_color = pick_color(random);
+
+    int vert = 0;
+    int u_steps = 36; // around main circle
+    int v_steps = 24; // around tube
+    float R = 0.6f;   // distance from center to tube center
+    float r = 0.3f;   // radius of tube
+
+    for(int i = 0; i < u_steps; i++)
+    {
+        float u1 = (2.0f * M_PI * i) / u_steps;
+        float u2 = (2.0f * M_PI * (i + 1)) / u_steps;
+
+        for(int j = 0; j < v_steps; j++)
+        {
+            float v1 = (2.0f * M_PI * j) / v_steps;
+            float v2 = (2.0f * M_PI * (j + 1)) / v_steps;
+
+            // 4 corners of quad on torus
+            vec4 p1 = { (R + r * cos(v1)) * cos(u1), (R + r * cos(v1)) * sin(u1), r * sin(v1), 1.0 };
+            vec4 p2 = { (R + r * cos(v2)) * cos(u1), (R + r * cos(v2)) * sin(u1), r * sin(v2), 1.0 };
+            vec4 p3 = { (R + r * cos(v2)) * cos(u2), (R + r * cos(v2)) * sin(u2), r * sin(v2), 1.0 };
+            vec4 p4 = { (R + r * cos(v1)) * cos(u2), (R + r * cos(v1)) * sin(u2), r * sin(v1), 1.0 };
+
+            // first triangle
+            vertices[vert]   = p1;
+            vertices[vert+1] = p2;
+            vertices[vert+2] = p3;
+
+            // second triangle
+            vertices[vert+3] = p1;
+            vertices[vert+4] = p3;
+            vertices[vert+5] = p4;
+
+            int random1 = 1 + rand() % 10;
+            int random2 = 1 + rand() % 10;
+
+            vec4 color1 = pick_color(random1);
+            vec4 color2 = pick_color(random2);
+
+            colors[vert]   = color1;
+            colors[vert+1] = color1;
+            colors[vert+2] = color1;
+            colors[vert+3] = color2;
+            colors[vert+4] = color2;
+            colors[vert+5] = color2;
+
+            vert += 6;
+        }
+    }
+
+    num_vertices = vert; // update total vertices
+}
+
+void make_spring(void)
+{
+    int vert = 0;
+
+    int u_steps = 72; // number of steps along the helix
+    int v_steps = 24; // number of steps around the tube
+    int turns = 3;    // number of full revolutions
+    float R = 0.4f;   // radius of spring coil
+    float r = 0.1f;   // tube radius
+    float height = 1.0f; // total height of spring
+
+    for(int i = 0; i < u_steps; i++)
+    {
+        float u1 = (2.0f * M_PI * turns * i) / u_steps;
+        float u2 = (2.0f * M_PI * turns * (i + 1)) / u_steps;
+
+        float z1 = height * i / u_steps;       // linear height along spring
+        float z2 = height * (i + 1) / u_steps;
+
+        for(int j = 0; j < v_steps; j++)
+        {
+            float v1 = (2.0f * M_PI * j) / v_steps;
+            float v2 = (2.0f * M_PI * (j + 1)) / v_steps;
+
+            // 4 corners of quad on spring tube
+            vec4 p1 = { (R + r * cos(v1)) * cos(u1),
+                        (R + r * cos(v1)) * sin(u1),
+                        z1 + r * sin(v1),
+                        1.0 };
+
+            vec4 p2 = { (R + r * cos(v2)) * cos(u1),
+                        (R + r * cos(v2)) * sin(u1),
+                        z1 + r * sin(v2),
+                        1.0 };
+
+            vec4 p3 = { (R + r * cos(v2)) * cos(u2),
+                        (R + r * cos(v2)) * sin(u2),
+                        z2 + r * sin(v2),
+                        1.0 };
+
+            vec4 p4 = { (R + r * cos(v1)) * cos(u2),
+                        (R + r * cos(v1)) * sin(u2),
+                        z2 + r * sin(v1),
+                        1.0 };
+
+            // first triangle
+            vertices[vert]   = p1;
+            vertices[vert+1] = p2;
+            vertices[vert+2] = p3;
+
+            // second triangle
+            vertices[vert+3] = p1;
+            vertices[vert+4] = p3;
+            vertices[vert+5] = p4;
+
+            int random1 = 1 + rand() % 10;
+            int random2 = 1 + rand() % 10;
+
+            vec4 color1 = pick_color(random1);
+            vec4 color2 = pick_color(random2);
+
+            colors[vert]   = color1;
+            colors[vert+1] = color1;
+            colors[vert+2] = color1;
+            colors[vert+3] = color2;
+            colors[vert+4] = color2;
+            colors[vert+5] = color2;
+
+            vert += 6;
+        }
+    }
+
+    num_vertices = vert;
 }
 
 void init(void)
@@ -368,7 +441,9 @@ int main(int argc, char **argv)
     glutInitWindowPosition(100,100);
     glutCreateWindow("Project 1");
 
-    make_Sphere();
+    //make_Sphere();
+    //make_donut();
+    make_spring();
 
     glewInit();
     init();
