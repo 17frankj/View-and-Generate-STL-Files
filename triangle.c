@@ -31,6 +31,7 @@
 
 
 // inital decelaration of vertices
+//      -inital values for debugging
 vec4 vertices[1500000] =
 {{ 0.0,  0.5,  0.0, 1.0},	// top
  {-0.5, -0.5,  0.0, 1.0},	// bottom left
@@ -43,22 +44,33 @@ vec4 colors[1500000] =
  {0.0, 0.0, 1.0, 1.0},	// blue  (for bottom right)
  };	
 
-// global variables
-int num_vertices = 1500000;
-mat4 my_ctm = {{1,0,0,0},{0,1,0,0}, {0,0,1,0}, {0,0,0,1}};
-GLuint ctm_location;
+// ------------global variables- --------------------------------------------------------------------------------------// 
+
+int num_vertices = 1500000;   // max number of verts needed for stl files
+mat4 my_ctm = {{1,0,0,0},{0,1,0,0}, {0,0,1,0}, {0,0,0,1}};  // initial identity matrix for moving the objects
+
+// converstions to open gl types
+GLuint ctm_location;  
 GLuint program;
 GLuint vbo;
+
+// msc global variables
 int stl_value = 0;
 float large_scale_value = 1.1;
 float small_scale_value = 0.9;
 float object_radius = 1.0f;
 
-// mouse/ motion variables
+// mouse/ motion global variables
 float lastX;
 float lastY;
 int leftDown = 0;
 float touching = 0;
+
+// -------------end glob vars  -----------------------------------------------------------------------------------------// 
+
+
+
+// ----------------- object functions  ---------------------------------------------------------------------------------//
 
 // Generate "random" numberes
 vec4 pick_color(int random_num)
@@ -92,7 +104,7 @@ vec4 pick_color(int random_num)
     }
 }
 
-// test functon
+// tester functon
 void make_first_triangle_sphere(void)
 {
     vertices[0] = (vec4){-0.0625,0.0625,0.0,1.0};  // top
@@ -110,6 +122,7 @@ void make_first_triangle_sphere(void)
     colors[5] = (vec4){0.0, 0.0, 1.0, 1.0};	// blue
 }
 
+// creates the sphere object
 void make_Sphere(void)
 {
     int random = 1 + rand() %10; // make random number between 1 and 10
@@ -168,6 +181,7 @@ void make_Sphere(void)
     num_vertices = vert; // update total number of vertices
 }
 
+// creates torus object
 void make_donut(void)
 {
     int random = 1 + rand() %10; // make random number between 1 and 10
@@ -225,6 +239,7 @@ void make_donut(void)
     num_vertices = vert; // update total vertices
 }
 
+// helper function for ends of spring object
 int make_ends_spring(void)
 {
     // make spring end circles
@@ -312,6 +327,7 @@ int make_ends_spring(void)
     return vert;
 }
 
+// primary function to create spring object
 void make_spring(void)
 {
     int vert = 0;
@@ -388,10 +404,12 @@ void make_spring(void)
     num_vertices = make_ends_spring();
 }
 
-
+// swaps between open gl buffers, one for basic objects, other for stl objects
 void update_vertex_buffer()
 {
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+    // Stl
     if(stl_value == 1) 
     {
         Mesh mesh = read_stl_binary("Little-darth-vader.STL");
@@ -400,6 +418,7 @@ void update_vertex_buffer()
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vec4) * mesh.num_vertices, mesh.vertices);
         glBufferSubData(GL_ARRAY_BUFFER, sizeof(vec4) * mesh.num_vertices, sizeof(vec4) * mesh.num_vertices, mesh.colors);
     } 
+    // basic objects
     else 
     {
         glBufferData(GL_ARRAY_BUFFER, sizeof(vertices) + sizeof(colors), NULL, GL_STATIC_DRAW);
@@ -408,6 +427,7 @@ void update_vertex_buffer()
     }
 }
 
+// Zoom out
 void make_shape_larger(void)
 {
     my_ctm = matrix_scaling(large_scale_value, large_scale_value, large_scale_value);
@@ -416,6 +436,7 @@ void make_shape_larger(void)
     large_scale_value += 0.1;
 }
 
+// Zoom in
 void make_shape_smaller(void)
 {
     my_ctm = matrix_scaling(small_scale_value, small_scale_value, small_scale_value);
@@ -424,6 +445,10 @@ void make_shape_smaller(void)
     small_scale_value -= 0.1;
 }
 
+// -------------------------- end object funcitons  ---------------------------------------------------------------------------------//
+
+
+// ---------------Open Gl Functions  --------------------------------------------------------------------------------- // 
 void init(void)
 {
 
@@ -576,6 +601,7 @@ mat4 axis_angle_rotation(vec4 axis, float angle)
     return m;
 }
 
+// calculates object location based on motion
 void motion(int x, int y)
 {
     if (!leftDown)
@@ -619,6 +645,9 @@ void motion(int x, int y)
     lastY = gly;
     glutPostRedisplay();
 }
+
+// ------------------------- end open Gl Functions --------------------------------------------------------------------------------- //
+
 
 int main(int argc, char **argv)
 {
