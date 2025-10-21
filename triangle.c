@@ -50,6 +50,7 @@ GLuint ctm_location;
 GLuint program;
 GLuint vbo;
 int stl_value = 0;
+float large_scale_value = 1.1;
 
 vec4 pick_color(int random_num)
 {
@@ -295,11 +296,6 @@ void make_spring(void)
     num_vertices = vert;
 }
 
-void draw_stl(void)
-{
-    stl_value = 1;
-}
-
 void update_vertex_buffer()
 {
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -317,6 +313,13 @@ void update_vertex_buffer()
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
         glBufferSubData(GL_ARRAY_BUFFER, sizeof(vertices), sizeof(colors), colors);
     }
+}
+
+void make_shape_larger(void)
+{
+    my_ctm = matrix_scaling(large_scale_value, large_scale_value, large_scale_value);
+    large_scale_value += 0.1;
+    
 }
 
 void init(void)
@@ -355,6 +358,7 @@ void display(void)
     glUniformMatrix4fv(ctm_location, 1, GL_FALSE, (GLfloat *) &my_ctm);
 
     glDrawArrays(GL_TRIANGLES, 0, num_vertices);
+
     /*
     my_ctm = identity();
     glUniformMatrix4fv(ctm_location, 1, GL_FALSE, (GLfloat *) &my_ctm);
@@ -394,6 +398,10 @@ void keyboard(unsigned char key, int mousex, int mousey)
         case '4': // STL
             stl_value = 1;
             update_vertex_buffer();
+            break;
+
+        case 'e': // enlarge
+            make_shape_larger();
             break;
     }
    
