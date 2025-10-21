@@ -52,6 +52,7 @@ GLuint vbo;
 int stl_value = 0;
 float large_scale_value = 1.1;
 float small_scale_value = 0.9;
+float object_radius = 1.0f;
 
 vec4 pick_color(int random_num)
 {
@@ -320,6 +321,7 @@ void make_shape_larger(void)
 {
     my_ctm = matrix_scaling(large_scale_value, large_scale_value, large_scale_value);
     small_scale_value = large_scale_value;
+    object_radius = large_scale_value;
     large_scale_value += 0.1;
 }
 
@@ -327,8 +329,8 @@ void make_shape_smaller(void)
 {
     my_ctm = matrix_scaling(small_scale_value, small_scale_value, small_scale_value);
     large_scale_value = small_scale_value;
+    object_radius = small_scale_value+0.6;
     small_scale_value -= 0.1;
-    
 }
 
 void init(void)
@@ -420,80 +422,127 @@ void keyboard(unsigned char key, int mousex, int mousey)
     glutPostRedisplay();
 }
 
-int mouseDown = 0;
 float lastX;
 float lastY;
 int leftDown = 0;
-int rightDown = 0;
+float touching = 0;
+
+// return 1 if pointer at (glx,gly) is over the object
+int is_pointer_on_object(float glx, float gly)
+{
+    // where mouse is pointing
+    vec4 p_screen = (vec4){ glx, gly, 0.0f, 1.0f };
+
+    // transform pointer into the object space: p_obj = inverse(my_ctm) * p_screen
+    mat4 inv = matrix_inverse(my_ctm);
+    vec4 p_obj = matrix_vector_multi(inv, p_screen);
+
+    // distance from origin in object space (ignore w)
+    // create a vec4 direction with w = 0 to compute magnitude
+    vec4 p_obj_dir = (vec4){ p_obj.x, p_obj.y, p_obj.z, 0.0f };
+    float dist = vec_Magnitude(p_obj_dir);
+
+    return (dist <= object_radius);
+}
+
+vec4 project_to_sphere(float x, float y)
+{
+    float z;
+    float d = x * x + y * y;
+    if (d <= 1.0f)
+        z = sqrtf(1.0f - d);
+    else
+        z = 0.0f;
+    return (vec4){x, y, z, 0.0f};
+}
 
 void mouse(int button, int state, int x, int y)
 {
-    //printf("%d %d %d %d\n", button, state, x, y);
-    float glx = (x / 400.0) - 1;
-    float gly = 1 - (y / 400.0);
+    float glx = (x / 400.0f) - 1.0f;
+    float gly = 1.0f - (y / 400.0f);
 
-    // left button, move with mouse
-    if(button == 0 && state == 0)
+    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
     {
         leftDown = 1;
-        my_ctm = matrix_translation(glx, gly, 0.0);  // snap triangle to pointer position
-
-        mouseDown = 1;
+        touching = is_pointer_on_object(glx, gly);  // check if pointer is on object's radius
         lastX = glx;
         lastY = gly;
-
-        //my_ctm = matrix_translation(glx, gly, 0.0);
     }
-    // right pressed, scale to 0.5 (get larger)
-    if(button == 2 && state == 0)
+    else if (button == GLUT_LEFT_BUTTON && state == GLUT_UP)
     {
-        rightDown = 1;
-        //printf("right button pressed\n");
-        my_ctm = matrix_scaling(0.5, 0.5, 0.5);
-
-        mouseDown = 1;
-        lastX = glx;
-        lastY = gly;
-
-    }
-    // no button, go back to center
-    if(button == 0 && state == 1)
-    {
-        mouseDown = 0;
         leftDown = 0;
-        //my_ctm = identity();
     }
-    if(button == 2 && state == 1)
-    {
-        mouseDown = 0;
-        rightDown = 0;
-        my_ctm = identity();
-    }
-    if(leftDown && rightDown)
-    {
-        //printf("Both left and right buttons are pressed!\n");
-        my_ctm = matrix_multi(matrix_translation(glx, gly, 0.0), matrix_scaling(0.5,0.5,0.5));
-    }
+
     glutPostRedisplay();
+}
+
+mat4 axis_angle_rotation(vec4 axis, float angle)
+{
+    float c = cosf(angle);
+    float s = sinf(angle);
+    float t = 1.0f - c;
+
+    float x = axis.x;
+    float y = axis.y;
+    float z = axis.z;
+
+    mat4 m;
+
+    m.x = (vec4){t*x*x + c,     t*x*y - s*z,   t*x*z + s*y,   0.0f};
+    m.y = (vec4){t*x*y + s*z,   t*y*y + c,     t*y*z - s*x,   0.0f};
+    m.z = (vec4){t*x*z - s*y,   t*y*z + s*x,   t*z*z + c,     0.0f};
+    m.w = (vec4){0.0f,          0.0f,          0.0f,          1.0f};
+
+    return m;
 }
 
 void motion(int x, int y)
 {
-    if(mouseDown)
-    {
-        float glx = (x / 400.0f) - 1.0f;
-        float gly = 1.0f - (y / 400.0f);
+    if (!leftDown)
+        return;
+    if (!touching)
+        return;
 
-        float currentx = glx - lastX;
-        float currenty = gly - lastY;
-        if(currentx != 0 || currenty != 0)
-        {
-            my_ctm = matrix_multi(matrix_translation(currentx, currenty, 0.0), my_ctm);
-            glutPostRedisplay();
-        }
-        lastX = glx;
-        lastY = gly;
+    float glx = (x / 400.0f) - 1.0f;
+    float gly = 1.0f - (y / 400.0f);
+
+    // if pointer has moved off the object, stop rotating
+    if (!is_pointer_on_object(glx, gly))
+    {
+        touching = 0;    // stop the rotation session
+        return;
     }
+
+    // previous and current points on virtual sphere
+    vec4 v1 = project_to_sphere(lastX, lastY);
+    vec4 v2 = project_to_sphere(glx, gly);
+
+    // rotation axis = cross(v1, v2)
+    vec4 axis = vec_Cross_Product(v1, v2);
+    float axis_len = vec_Magnitude(axis);
+    /*
+    if (axis_len < 1e-6f)
+        
+        return;
+    */
+    axis = vec_Normalized(axis);
+
+    // angle = arccos(dot(v1,v2))
+    float dot = vec_Dot_product(v1, v2);
+    if (dot > 1.0f) dot = 1.0f;
+    if (dot < -1.0f) dot = -1.0f;
+    float angle = acosf(dot);
+
+    // rotation matrix about arbitrary axis
+    mat4 rotation = axis_angle_rotation(axis, angle);
+
+    // apply rotation about origin
+    my_ctm = matrix_multi(rotation, my_ctm);
+    //my_ctm = matrix_multi(my_ctm, rotation);
+
+    lastX = glx;
+    lastY = gly;
+    glutPostRedisplay();
 }
 
 int main(int argc, char **argv)
@@ -508,8 +557,8 @@ int main(int argc, char **argv)
     init();
     glutDisplayFunc(display);
     glutKeyboardFunc(keyboard);
-    //glutMouseFunc(mouse);
-    //glutMotionFunc(motion);
+    glutMouseFunc(mouse);
+    glutMotionFunc(motion);
     glutMainLoop();
 
     return 0;
