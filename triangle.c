@@ -51,6 +51,7 @@ GLuint program;
 GLuint vbo;
 int stl_value = 0;
 float large_scale_value = 1.1;
+float small_scale_value = 0.9;
 
 vec4 pick_color(int random_num)
 {
@@ -318,7 +319,15 @@ void update_vertex_buffer()
 void make_shape_larger(void)
 {
     my_ctm = matrix_scaling(large_scale_value, large_scale_value, large_scale_value);
+    small_scale_value = large_scale_value;
     large_scale_value += 0.1;
+}
+
+void make_shape_smaller(void)
+{
+    my_ctm = matrix_scaling(small_scale_value, small_scale_value, small_scale_value);
+    large_scale_value = small_scale_value;
+    small_scale_value -= 0.1;
     
 }
 
@@ -402,6 +411,9 @@ void keyboard(unsigned char key, int mousex, int mousey)
 
         case 'e': // enlarge
             make_shape_larger();
+            break;
+        case 'r': // shrink
+            make_shape_smaller();
             break;
     }
    
