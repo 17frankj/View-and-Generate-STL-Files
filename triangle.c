@@ -31,19 +31,19 @@
 
 
 
-vec4 vertices[1000000] =
+vec4 vertices[1500000] =
 {{ 0.0,  0.5,  0.0, 1.0},	// top
  {-0.5, -0.5,  0.0, 1.0},	// bottom left
  { 0.5, -0.5,  0.0, 1.0},	// bottom right
  };	
 
-vec4 colors[1000000] =
+vec4 colors[1500000] =
 {{1.0, 0.0, 0.0, 1.0},	// red   (for top)
  {0.0, 1.0, 0.0, 1.0},	// green (for bottom left)
  {0.0, 0.0, 1.0, 1.0},	// blue  (for bottom right)
  };	
 
-int num_vertices = 100000;
+int num_vertices = 1500000;
 
 mat4 my_ctm = {{1,0,0,0},{0,1,0,0}, {0,0,1,0}, {0,0,0,1}};
 GLuint ctm_location;
@@ -174,18 +174,18 @@ void make_donut(void)
     int vert = 0;
     int u_steps = 36; // around main circle
     int v_steps = 24; // around tube
-    float R = 0.6f;   // distance from center to tube center
-    float r = 0.3f;   // radius of tube
+    float R = 0.6;   // distance from center to tube center
+    float r = 0.3;   // radius of tube
 
     for(int i = 0; i < u_steps; i++)
     {
-        float u1 = (2.0f * M_PI * i) / u_steps;
-        float u2 = (2.0f * M_PI * (i + 1)) / u_steps;
+        float u1 = (2.0 * M_PI * i) / u_steps;
+        float u2 = (2.0 * M_PI * (i + 1)) / u_steps;
 
         for(int j = 0; j < v_steps; j++)
         {
-            float v1 = (2.0f * M_PI * j) / v_steps;
-            float v2 = (2.0f * M_PI * (j + 1)) / v_steps;
+            float v1 = (2.0 * M_PI * j) / v_steps;
+            float v2 = (2.0 * M_PI * (j + 1)) / v_steps;
 
             // 4 corners of quad on torus
             vec4 p1 = { (R + r * cos(v1)) * cos(u1), (R + r * cos(v1)) * sin(u1), r * sin(v1), 1.0 };
@@ -223,6 +223,93 @@ void make_donut(void)
     num_vertices = vert; // update total vertices
 }
 
+int make_ends_spring(void)
+{
+    // make spring end circles
+
+    float R = 0.4;   // radius of spring coil
+    float r = 0.1;   // tube radius
+    float height = 1.0; // total height of spring
+    int vert = 10368;
+    int circle_points = 36;
+    vec4 p[36];
+    
+    // first use a base point on +x axis
+    vec4 base_point = {1.0, 0.0, 0.0, 1.0};
+
+    // Circle lies in XY plane, and centered at origin
+    mat4 scale = matrix_scaling(r, r, 1.0);
+    mat4 translate_bottom = matrix_translation(R, 0.0, 0.0);
+    mat4 translate_top = matrix_translation(R, 0.0, height);
+
+    mat4 align_to_z = rotate_x(270.0);  // rotate circle from XY to YZ plane
+
+    // Create the circle outline
+    for (int i = 0; i < circle_points; i++) 
+    {
+        float angle = (10 * i);
+        mat4 rot = rotate_z(angle);
+        //p[i] = matrix_vector_multi(rot, base_point);
+        // rotate around Z to make the circle, then align to X
+        p[i] = matrix_vector_multi(rot, base_point);
+    }
+    
+    // bottom cap 
+    for (int i = 0; i < circle_points; i++) 
+    {
+        int next = (i + 1) % circle_points;
+        vec4 center = {0.0, 0.0, 0.0, 1.0};
+
+        vec4 v1 = matrix_vector_multi(translate_bottom, matrix_vector_multi(align_to_z, matrix_vector_multi(scale, p[i])));
+        vec4 v2 = matrix_vector_multi(translate_bottom, matrix_vector_multi(align_to_z, matrix_vector_multi(scale, p[next])));
+        vec4 c  = matrix_vector_multi(translate_bottom, matrix_vector_multi(align_to_z, matrix_vector_multi(scale, center)));
+
+        vertices[vert]   = c;
+        vertices[vert+1] = v2;
+        vertices[vert+2] = v1;
+
+        int random1 = 1 + rand() % 10;
+        int random2 = 1 + rand() % 10;
+        int random3 = 1 + rand() % 10;
+        vec4 color = pick_color(random1);
+        vec4 color2 = pick_color(random2);
+        vec4 color3 = pick_color(random3);
+
+        colors[vert]   = color;
+        colors[vert+1] = color2;
+        colors[vert+2] = color3;
+        vert += 3;
+    }
+
+    // top cap
+    for (int i = 0; i < circle_points; i++) 
+    {
+        int next = (i + 1) % circle_points;
+        vec4 center = {0.0, 0.0, 0.0, 1.0};
+
+        vec4 v1 = matrix_vector_multi(translate_top, matrix_vector_multi(align_to_z, matrix_vector_multi(scale, p[i])));
+        vec4 v2 = matrix_vector_multi(translate_top, matrix_vector_multi(align_to_z, matrix_vector_multi(scale, p[next])));
+        vec4 c  = matrix_vector_multi(translate_top, matrix_vector_multi(align_to_z, matrix_vector_multi(scale, center)));
+
+        vertices[vert]   = c;
+        vertices[vert+1] = v1;  // <--- reverse the winding
+        vertices[vert+2] = v2;
+
+        int random1 = 1 + rand() % 10;
+        int random2 = 1 + rand() % 10;
+        int random3 = 1 + rand() % 10;
+        vec4 color = pick_color(random1);
+        vec4 color2 = pick_color(random2);
+        vec4 color3 = pick_color(random3);
+
+        colors[vert]   = color;
+        colors[vert+1] = color2;
+        colors[vert+2] = color3;
+        vert += 3;
+    }
+    return vert;
+}
+
 void make_spring(void)
 {
     int vert = 0;
@@ -230,22 +317,24 @@ void make_spring(void)
     int u_steps = 72; // number of steps along the helix
     int v_steps = 24; // number of steps around the tube
     int turns = 3;    // number of full revolutions
-    float R = 0.4f;   // radius of spring coil
-    float r = 0.1f;   // tube radius
-    float height = 1.0f; // total height of spring
+    float R = 0.4;   // radius of spring coil
+    float r = 0.1;   // tube radius
+    float height = 1.0; // total height of spring
+
+    // make spring body
 
     for(int i = 0; i < u_steps; i++)
     {
-        float u1 = (2.0f * M_PI * turns * i) / u_steps;
-        float u2 = (2.0f * M_PI * turns * (i + 1)) / u_steps;
+        float u1 = (2.0 * M_PI * turns * i) / u_steps;
+        float u2 = (2.0 * M_PI * turns * (i + 1)) / u_steps;
 
-        float z1 = height * i / u_steps;       // linear height along spring
+        float z1 = height * i / u_steps;       // height along spring
         float z2 = height * (i + 1) / u_steps;
 
         for(int j = 0; j < v_steps; j++)
         {
-            float v1 = (2.0f * M_PI * j) / v_steps;
-            float v2 = (2.0f * M_PI * (j + 1)) / v_steps;
+            float v1 = (2.0 * M_PI * j) / v_steps;
+            float v2 = (2.0 * M_PI * (j + 1)) / v_steps;
 
             // 4 corners of quad on spring tube
             vec4 p1 = { (R + r * cos(v1)) * cos(u1),
@@ -294,9 +383,9 @@ void make_spring(void)
             vert += 6;
         }
     }
-
-    num_vertices = vert;
+    num_vertices = make_ends_spring();
 }
+
 
 void update_vertex_buffer()
 {
