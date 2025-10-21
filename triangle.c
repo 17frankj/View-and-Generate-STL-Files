@@ -30,7 +30,7 @@
 #define BUFFER_OFFSET( offset )   ((GLvoid*) (offset))
 
 
-
+// inital decelaration of vertices
 vec4 vertices[1500000] =
 {{ 0.0,  0.5,  0.0, 1.0},	// top
  {-0.5, -0.5,  0.0, 1.0},	// bottom left
@@ -43,8 +43,8 @@ vec4 colors[1500000] =
  {0.0, 0.0, 1.0, 1.0},	// blue  (for bottom right)
  };	
 
+// global variables
 int num_vertices = 1500000;
-
 mat4 my_ctm = {{1,0,0,0},{0,1,0,0}, {0,0,1,0}, {0,0,0,1}};
 GLuint ctm_location;
 GLuint program;
@@ -54,6 +54,13 @@ float large_scale_value = 1.1;
 float small_scale_value = 0.9;
 float object_radius = 1.0f;
 
+// mouse/ motion variables
+float lastX;
+float lastY;
+int leftDown = 0;
+float touching = 0;
+
+// Generate "random" numberes
 vec4 pick_color(int random_num)
 {
 
@@ -85,6 +92,7 @@ vec4 pick_color(int random_num)
     }
 }
 
+// test functon
 void make_first_triangle_sphere(void)
 {
     vertices[0] = (vec4){-0.0625,0.0625,0.0,1.0};  // top
@@ -102,8 +110,10 @@ void make_first_triangle_sphere(void)
     colors[5] = (vec4){0.0, 0.0, 1.0, 1.0};	// blue
 }
 
-void make_inital_sphere_on_z(void)
+void make_Sphere(void)
 {
+    int random = 1 + rand() %10; // make random number between 1 and 10
+    vec4 random_color = pick_color(random);
     int vert = 0;
     vec4 base = (vec4){0, -1, 0, 1};   // start at bottom of sphere (on -y axis)
 
@@ -156,14 +166,6 @@ void make_inital_sphere_on_z(void)
         }
     }
     num_vertices = vert; // update total number of vertices
-}
-
-void make_Sphere(void)
-{
-    int random = 1 + rand() %10; // make random number between 1 and 10
-    vec4 random_color = pick_color(random);
-
-    make_inital_sphere_on_z();
 }
 
 void make_donut(void)
@@ -459,13 +461,6 @@ void display(void)
 
     glDrawArrays(GL_TRIANGLES, 0, num_vertices);
 
-    /*
-    my_ctm = identity();
-    glUniformMatrix4fv(ctm_location, 1, GL_FALSE, (GLfloat *) &my_ctm);
-    glDrawArrays(GL_TRIANGLES, 3, 3);
-    */
- 
-
     glutSwapBuffers();
 }
 
@@ -511,11 +506,6 @@ void keyboard(unsigned char key, int mousex, int mousey)
     glutPostRedisplay();
 }
 
-float lastX;
-float lastY;
-int leftDown = 0;
-float touching = 0;
-
 // return 1 if pointer at (glx,gly) is over the object
 int is_pointer_on_object(float glx, float gly)
 {
@@ -526,7 +516,7 @@ int is_pointer_on_object(float glx, float gly)
     mat4 inv = matrix_inverse(my_ctm);
     vec4 p_obj = matrix_vector_multi(inv, p_screen);
 
-    // distance from origin in object space (ignore w)
+    // distance from origin in object space 
     // create a vec4 direction with w = 0 to compute magnitude
     vec4 p_obj_dir = (vec4){ p_obj.x, p_obj.y, p_obj.z, 0.0f };
     float dist = vec_Magnitude(p_obj_dir);
@@ -565,6 +555,7 @@ void mouse(int button, int state, int x, int y)
     glutPostRedisplay();
 }
 
+// get a matrix from an arbitrary angle
 mat4 axis_angle_rotation(vec4 axis, float angle)
 {
     float c = cosf(angle);
@@ -609,11 +600,6 @@ void motion(int x, int y)
     // rotation axis = cross(v1, v2)
     vec4 axis = vec_Cross_Product(v1, v2);
     float axis_len = vec_Magnitude(axis);
-    /*
-    if (axis_len < 1e-6f)
-        
-        return;
-    */
     axis = vec_Normalized(axis);
 
     // angle = arccos(dot(v1,v2))
