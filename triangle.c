@@ -57,7 +57,9 @@ GLuint vbo;
 // msc global variables
 int stl_value = 0;
 float large_scale_value = 1.1;
+int made_larger = 0;
 float small_scale_value = 0.9;
+int made_smaller = 0;
 float object_radius = 1.0f;
 
 // mouse/ motion global variables
@@ -404,6 +406,26 @@ void make_spring(void)
     num_vertices = make_ends_spring();
 }
 
+// Zoom out
+void make_shape_larger(void)
+{
+    my_ctm = matrix_scaling(large_scale_value, large_scale_value, large_scale_value);
+    small_scale_value = large_scale_value;
+    object_radius = large_scale_value;
+    large_scale_value += 0.1;
+    made_smaller = 0;
+}
+
+// Zoom in
+void make_shape_smaller(void)
+{
+    my_ctm = matrix_scaling(small_scale_value, small_scale_value, small_scale_value);
+    large_scale_value = small_scale_value;
+    object_radius = small_scale_value+0.6;
+    small_scale_value -= 0.1;
+    made_larger = 0;
+}
+
 // swaps between open gl buffers, one for basic objects, other for stl objects
 void update_vertex_buffer()
 {
@@ -427,23 +449,6 @@ void update_vertex_buffer()
     }
 }
 
-// Zoom out
-void make_shape_larger(void)
-{
-    my_ctm = matrix_scaling(large_scale_value, large_scale_value, large_scale_value);
-    small_scale_value = large_scale_value;
-    object_radius = large_scale_value;
-    large_scale_value += 0.1;
-}
-
-// Zoom in
-void make_shape_smaller(void)
-{
-    my_ctm = matrix_scaling(small_scale_value, small_scale_value, small_scale_value);
-    large_scale_value = small_scale_value;
-    object_radius = small_scale_value+0.6;
-    small_scale_value -= 0.1;
-}
 
 // -------------------------- end object funcitons  ---------------------------------------------------------------------------------//
 
@@ -468,6 +473,7 @@ void init(void)
     glEnableVertexAttribArray(vColor);
     glVertexAttribPointer(vColor, 4, GL_FLOAT, GL_FALSE, 0, (GLvoid *) sizeof(vertices));
 
+    //my_ctm = identity();
     ctm_location = glGetUniformLocation(program, "ctm");
 
     glEnable(GL_DEPTH_TEST);
@@ -493,6 +499,16 @@ void keyboard(unsigned char key, int mousex, int mousey)
 {
     switch(key)
     {
+        case 'e': // enlarge
+            made_larger = 1;
+            make_shape_larger();
+            break;
+
+        case 'r': // reduce
+            made_smaller = 1;
+            make_shape_smaller();
+            break;
+
         case 'q':
             glutLeaveMainLoop();
             break;
@@ -519,19 +535,13 @@ void keyboard(unsigned char key, int mousex, int mousey)
             stl_value = 1;
             update_vertex_buffer();
             break;
-
-        case 'e': // enlarge
-            make_shape_larger();
-            break;
-        case 'r': // shrink
-            make_shape_smaller();
-            break;
     }
    
     glutPostRedisplay();
 }
 
 // return 1 if pointer at (glx,gly) is over the object
+// i.e the mouse is "out of bounds"
 int is_pointer_on_object(float glx, float gly)
 {
     // where mouse is pointing
@@ -549,6 +559,7 @@ int is_pointer_on_object(float glx, float gly)
     return (dist <= object_radius);
 }
 
+// make a "virtual sphere" to aid in mouse location and motion
 vec4 project_to_sphere(float x, float y)
 {
     float z;
@@ -560,6 +571,8 @@ vec4 project_to_sphere(float x, float y)
     return (vec4){x, y, z, 0.0f};
 }
 
+// get the mouse location and input from user
+// then return a state based on the mouse pointer's location
 void mouse(int button, int state, int x, int y)
 {
     float glx = (x / 400.0f) - 1.0f;
@@ -580,67 +593,80 @@ void mouse(int button, int state, int x, int y)
     glutPostRedisplay();
 }
 
-// get a matrix from an arbitrary angle
+// find a matrix from an arbitrary angle
 mat4 axis_angle_rotation(vec4 axis, float angle)
 {
-    float c = cosf(angle);
-    float s = sinf(angle);
-    float t = 1.0f - c;
+    float c = cosf(angle);  // cos
+    float s = sinf(angle);  // sin
+    float t = 1.0f - c;     // tan
 
     float x = axis.x;
     float y = axis.y;
     float z = axis.z;
 
-    mat4 m;
+    mat4 m;  // generic mat4
 
-    m.x = (vec4){t*x*x + c,     t*x*y - s*z,   t*x*z + s*y,   0.0f};
+    // calculate the arbitrary matrix coordinates with cos, sin, tan of provided angle
+    m.x = (vec4){t*x*x + c,     t*x*y - s*z,   t*x*z + s*y,   0.0f}; 
     m.y = (vec4){t*x*y + s*z,   t*y*y + c,     t*y*z - s*x,   0.0f};
     m.z = (vec4){t*x*z - s*y,   t*y*z + s*x,   t*z*z + c,     0.0f};
-    m.w = (vec4){0.0f,          0.0f,          0.0f,          1.0f};
+    m.w = (vec4){0.0f,          0.0f,          0.0f,          1.0f}; // just assigns this struct as a mat4 (0) instead of a point(1)
 
-    return m;
+    return m; // returns the arbitrary matrix 
 }
 
-// calculates object location based on motion
+// calculates object location based on the users actions
 void motion(int x, int y)
 {
+    // make sure the user is pressing their keys and the pointer location is in bounds
     if (!leftDown)
         return;
     if (!touching)
         return;
 
+    // get loaction of mouse pointer 
+    // based on a 400 / 400 pixel display
     float glx = (x / 400.0f) - 1.0f;
     float gly = 1.0f - (y / 400.0f);
 
     // if pointer has moved off the object, stop rotating
+    // this is checked every frame!
     if (!is_pointer_on_object(glx, gly))
     {
         touching = 0;    // stop the rotation session
         return;
     }
 
-    // previous and current points on virtual sphere
+    // keep previous and current points on the "virtual sphere"
     vec4 v1 = project_to_sphere(lastX, lastY);
     vec4 v2 = project_to_sphere(glx, gly);
 
-    // rotation axis = cross(v1, v2)
-    vec4 axis = vec_Cross_Product(v1, v2);
+    // rotation axis = cross product(v2, v1)
+    // cross product of the previous and current virtual spheres 
+    vec4 axis = vec_Cross_Product(v2, v1);  // make this v1, v2 for inverse controls!!!!
     float axis_len = vec_Magnitude(axis);
-    axis = vec_Normalized(axis);
+    axis = vec_Normalized(axis);  
 
+    // gets the angle of the two vectors using the inverse 
     // angle = arccos(dot(v1,v2))
     float dot = vec_Dot_product(v1, v2);
-    if (dot > 1.0f) dot = 1.0f;
-    if (dot < -1.0f) dot = -1.0f;
+    if (dot > 1.0f) 
+    {
+        dot = 1.0f;
+    }
+    if (dot < -1.0f) 
+    {
+        dot = -1.0f;
+    }
     float angle = acosf(dot);
 
     // rotation matrix about arbitrary axis
     mat4 rotation = axis_angle_rotation(axis, angle);
 
     // apply rotation about origin
-    my_ctm = matrix_multi(rotation, my_ctm);
-    //my_ctm = matrix_multi(my_ctm, rotation);
-
+    //my_ctm = matrix_multi(rotation, my_ctm);
+    my_ctm = matrix_multi(my_ctm, rotation);
+   
     lastX = glx;
     lastY = gly;
     glutPostRedisplay();
