@@ -27,27 +27,29 @@
 #include <time.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
+#include <ctype.h>
 
 #define BUFFER_OFFSET( offset )   ((GLvoid*) (offset))
 
-
 // inital decelaration of vertices
 //      -inital values for debugging
-vec4 vertices[1400000] =
+vec4 vertices[110000] =
 {{ 0.0,  0.5,  0.0, 1.0},	// top
  {-0.5, -0.5,  0.0, 1.0},	// bottom left
  { 0.5, -0.5,  0.0, 1.0},	// bottom right
  };	
 
-vec4 colors[1400000] =
+vec4 colors[110000] =
 {{1.0, 0.0, 0.0, 1.0},	// red   (for top)
  {0.0, 1.0, 0.0, 1.0},	// green (for bottom left)
  {0.0, 0.0, 1.0, 1.0},	// blue  (for bottom right)
  };	
 
+ 
 // ------------global variables- --------------------------------------------------------------------------------------// 
 
-int num_vertices = 14000000;   // max number of verts needed for stl
+int num_vertices = 1100000;   // max number of verts needed for stl
 mat4 my_ctm = {{1,0,0,0},{0,1,0,0}, {0,0,1,0}, {0,0,0,1}};  // initial identity matrix for moving the objects
 
 // converstions to open gl types
@@ -56,12 +58,13 @@ GLuint program;
 GLuint vbo;
 
 // msc global variables
-int stl_value = 0;
+int stl_value = 0;    // change this to swap between stl and basic object for memory allocation
 float current_scale = 1;
 float large_scale_value = 1.1;
 float small_scale_value = 0.9;
 float object_radius = 1.0;
 int mesh_num_verts;
+char *given_stl;
 
 // mouse/ motion global variables
 float lastX;
@@ -401,7 +404,7 @@ void make_spring(void)
     }
     // make the bottom and top caps
     num_vertices = make_ends_spring();
-    printf("%d", num_vertices);
+    //printf("%d", num_vertices);
 }
 
 // Zoom out
@@ -426,14 +429,16 @@ void make_shape_smaller(void)
 void update_vertex_buffer()
 {
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    Mesh mesh = read_stl_binary("Little-darth-vader.STL");
-    //Mesh mesh = read_stl_binary("CL_whole.stl");
+    // printf("proccessing: %s", (given_stl));
+    const char* filename = given_stl;    // get user provided filename for stl
+    Mesh mesh = read_stl_binary(filename);
+    normalize_mesh(&mesh); // normalizes mesh size to fit screen
+    mesh_num_verts = mesh.num_vertices; // gives memory size for buffer
 
     // Stl
     if(stl_value == 1) 
     {
-        normalize_mesh(&mesh); // normalizes mesh size to fit screen
-        mesh_num_verts = mesh.num_vertices;
+        //printf("%d", mesh_num_verts);
         glBufferData(GL_ARRAY_BUFFER, sizeof(vec4) * mesh.num_vertices * 2, NULL, GL_STATIC_DRAW);
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vec4) * mesh.num_vertices, mesh.vertices);
         glBufferSubData(GL_ARRAY_BUFFER, sizeof(vec4) * mesh.num_vertices, sizeof(vec4) * mesh.num_vertices, mesh.colors);
@@ -445,6 +450,7 @@ void update_vertex_buffer()
         glBufferData(GL_ARRAY_BUFFER, sizeof(vertices) + sizeof(colors), NULL, GL_STATIC_DRAW);
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
         glBufferSubData(GL_ARRAY_BUFFER, sizeof(vertices), sizeof(colors), colors);
+
     }
 }
 
@@ -455,21 +461,38 @@ void update_vertex_buffer()
 // ---------------Open Gl Functions  --------------------------------------------------------------------------------- // 
 void init(void)
 {
+    // set sizes for verts from STL before drawing
+    my_ctm = identity(); // clear garbage in memory
+
     GLuint program = initShader("vshader.glsl", "fshader.glsl");
     glUseProgram(program);
+
+    GLuint vao;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
 
     // Single VBO
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     //glBufferData(GL_ARRAY_BUFFER, sizeof(vertices) + sizeof(colors), NULL, GL_STATIC_DRAW);
 
+    update_vertex_buffer(); // changers buffer based on if stl or basic shapes
+
     GLuint vPosition = glGetAttribLocation(program, "vPosition");
     glEnableVertexAttribArray(vPosition);
     glVertexAttribPointer(vPosition, 4, GL_FLOAT, GL_FALSE, 0, (GLvoid *) 0);
 
     GLuint vColor = glGetAttribLocation(program, "vColor");
-    glEnableVertexAttribArray(vColor);
-    glVertexAttribPointer(vColor, 4, GL_FLOAT, GL_FALSE, 0, (GLvoid *) sizeof(vertices));
+    glEnableVertexAttribArray(vColor);  
+
+    if(stl_value == 0)  // check if stl is being loaded // if it is then do basic shape render
+    {
+        glVertexAttribPointer(vColor, 4, GL_FLOAT, GL_FALSE, 0, (GLvoid *) sizeof(vertices));
+    }
+    else // if stl, do proper size for massive or small stls
+    {
+        glVertexAttribPointer(vColor, 4, GL_FLOAT, GL_FALSE, 0, (GLvoid*)(sizeof(vec4) * mesh_num_verts)); 
+    }
 
     ctm_location = glGetUniformLocation(program, "ctm");
 
@@ -685,14 +708,66 @@ void motion(int x, int y)
 
 // ------------------------- end open Gl Functions --------------------------------------------------------------------------------- //
 
+// ------------------------ MSC Functions ------------------------------------------------------------------------------------------ //
+
+// checks if user's file ext matches stl
+int has_extension(const char *filename, const char *ext) {
+    const char *dot = strrchr(filename, '.');
+    if (!dot || dot == filename) return 0;
+
+    // compare case-insensitively
+    while (*dot && *ext) {
+        if (tolower((unsigned char)*dot) != tolower((unsigned char)*ext))
+            return 0;
+        dot++;
+        ext++;
+    }
+    return *dot == '\0' && *ext == '\0';
+}
+
+// basic selection menu for shapes
+void menu(void)
+{
+    char line[100];
+    printf("Welcome to Shape Viewer!\n");
+    printf("    For STL: Enter Filename: \n");
+    printf("    For Shapes: Type anything else \n");
+    fgets(line, sizeof(line), stdin);
+    line[strcspn(line, "\n")] = 0; // remove \n in the end of input
+
+    // check if extension is .stl
+    if(has_extension(line, ".stl"))
+    {
+        stl_value = 1;
+        free(given_stl); // clean up junk in memory
+        given_stl = strdup(line);
+        printf("what you typed: %s\n", given_stl);
+        printf("    to exit Press q\n");
+    }
+    else
+    {
+        printf("    Sphere         Press 1\n");
+        printf("    Torus          Press 2\n");
+        printf("    Spring         Press 3\n");
+        printf("    inncorrect STL Press 4\n");
+        printf("    To exit        Press q\n");
+    }
+    
+}
 
 int main(int argc, char **argv)
 {
+    // inital parameters 
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
     glutInitWindowSize(800, 800);
     glutInitWindowPosition(100,100);
     glutCreateWindow("Project 1");
+
+    // do prompt before drawing anything
+    menu();
+
+    // now draw the shapes
     glewInit();
     init();
     glutDisplayFunc(display);
