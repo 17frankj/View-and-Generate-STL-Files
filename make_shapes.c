@@ -222,13 +222,13 @@ void make_donut(void)
 
             // first triangle
             vertices[vert]   = p1;
-            vertices[vert+1] = p2;
-            vertices[vert+2] = p3;
+            vertices[vert+1] = p3;
+            vertices[vert+2] = p2;
 
             // second triangle
             vertices[vert+3] = p1;
-            vertices[vert+4] = p3;
-            vertices[vert+5] = p4;
+            vertices[vert+4] = p4;
+            vertices[vert+5] = p3;
 
             int random1 = 1 + rand() % 10;
             int random2 = 1 + rand() % 10;
@@ -378,13 +378,13 @@ void make_spring(void)
 
             // first triangle
             vertices[vert]   = p1;
-            vertices[vert+1] = p2;
-            vertices[vert+2] = p3;
+            vertices[vert+1] = p3;
+            vertices[vert+2] = p2;
 
             // second triangle
             vertices[vert+3] = p1;
-            vertices[vert+4] = p3;
-            vertices[vert+5] = p4;
+            vertices[vert+4] = p4;
+            vertices[vert+5] = p3;
 
             int random1 = 1 + rand() % 10;
             int random2 = 1 + rand() % 10;
