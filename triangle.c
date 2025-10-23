@@ -1,8 +1,11 @@
 /*
  * triangle.c
  *
- *  Created on: Aug 28, 2017
+ *  Initally Created on: Aug 28, 2017
  *      Author: Thumrongsak Kosiyatrakul
+ * 
+ *  Project 1: Created on: Octobor 22, 2025
+ *      Author: Joshua Frank
  */
 
 
@@ -32,13 +35,13 @@
 
 // inital decelaration of vertices
 //      -inital values for debugging
-vec4 vertices[1500000] =
+vec4 vertices[1400000] =
 {{ 0.0,  0.5,  0.0, 1.0},	// top
  {-0.5, -0.5,  0.0, 1.0},	// bottom left
  { 0.5, -0.5,  0.0, 1.0},	// bottom right
  };	
 
-vec4 colors[1500000] =
+vec4 colors[1400000] =
 {{1.0, 0.0, 0.0, 1.0},	// red   (for top)
  {0.0, 1.0, 0.0, 1.0},	// green (for bottom left)
  {0.0, 0.0, 1.0, 1.0},	// blue  (for bottom right)
@@ -46,7 +49,7 @@ vec4 colors[1500000] =
 
 // ------------global variables- --------------------------------------------------------------------------------------// 
 
-int num_vertices = 1500000;   // max number of verts needed for stl files
+int num_vertices = 14000000;   // max number of verts needed for stl
 mat4 my_ctm = {{1,0,0,0},{0,1,0,0}, {0,0,1,0}, {0,0,0,1}};  // initial identity matrix for moving the objects
 
 // converstions to open gl types
@@ -59,7 +62,8 @@ int stl_value = 0;
 float current_scale = 1;
 float large_scale_value = 1.1;
 float small_scale_value = 0.9;
-float object_radius = 1.0f;
+float object_radius = 1.0;
+int mesh_num_verts;
 
 // mouse/ motion global variables
 float lastX;
@@ -194,17 +198,22 @@ void make_donut(void)
     float R = 0.6;   // distance from center to tube center
     float r = 0.3;   // radius of tube
 
+    // outer circle
     for(int i = 0; i < u_steps; i++)
     {
-        float u1 = (2.0 * M_PI * i) / u_steps;
-        float u2 = (2.0 * M_PI * (i + 1)) / u_steps;
+        float u1 = (2.0 * M_PI * i) / u_steps;  // inital u
+        float u2 = (2.0 * M_PI * (i + 1)) / u_steps; // future u
 
+        // inner tube
         for(int j = 0; j < v_steps; j++)
         {
-            float v1 = (2.0 * M_PI * j) / v_steps;
-            float v2 = (2.0 * M_PI * (j + 1)) / v_steps;
+            float v1 = (2.0 * M_PI * j) / v_steps;  // inital v
+            float v2 = (2.0 * M_PI * (j + 1)) / v_steps; // future v
 
             // 4 corners of quad on torus
+            // take a circle of radius r, 
+            // then push it R units away from the origin, 
+            // then spin it around the Y-axis by u
             vec4 p1 = { (R + r * cos(v1)) * cos(u1), (R + r * cos(v1)) * sin(u1), r * sin(v1), 1.0 };
             vec4 p2 = { (R + r * cos(v2)) * cos(u1), (R + r * cos(v2)) * sin(u1), r * sin(v2), 1.0 };
             vec4 p3 = { (R + r * cos(v2)) * cos(u2), (R + r * cos(v2)) * sin(u2), r * sin(v2), 1.0 };
@@ -248,7 +257,7 @@ int make_ends_spring(void)
     float R = 0.4;   // radius of spring coil
     float r = 0.1;   // tube radius
     float height = 1.0; // total height of spring
-    int vert = 10368;
+    int vert = 10368;   // current place in the verticies array
     int circle_points = 36;
     vec4 p[36];
     
@@ -265,23 +274,24 @@ int make_ends_spring(void)
     // Create the circle outline
     for (int i = 0; i < circle_points; i++) 
     {
+        // rotate around Z to make the circle, then align to X
         float angle = (10 * i);
         mat4 rot = rotate_z(angle);
-        //p[i] = matrix_vector_multi(rot, base_point);
-        // rotate around Z to make the circle, then align to X
         p[i] = matrix_vector_multi(rot, base_point);
     }
     
     // bottom cap 
+    // creates the circle around a center point
     for (int i = 0; i < circle_points; i++) 
     {
-        int next = (i + 1) % circle_points;
-        vec4 center = {0.0, 0.0, 0.0, 1.0};
+        int next = (i + 1) % circle_points;   // next slice of circle
+        vec4 center = {0.0, 0.0, 0.0, 1.0};   // center of circle
 
         vec4 v1 = matrix_vector_multi(translate_bottom, matrix_vector_multi(align_to_z, matrix_vector_multi(scale, p[i])));
         vec4 v2 = matrix_vector_multi(translate_bottom, matrix_vector_multi(align_to_z, matrix_vector_multi(scale, p[next])));
         vec4 c  = matrix_vector_multi(translate_bottom, matrix_vector_multi(align_to_z, matrix_vector_multi(scale, center)));
 
+        // set vert values for triangles
         vertices[vert]   = c;
         vertices[vert+1] = v2;
         vertices[vert+2] = v1;
@@ -300,15 +310,17 @@ int make_ends_spring(void)
     }
 
     // top cap
+    // creates the circle around a center point
     for (int i = 0; i < circle_points; i++) 
     {
-        int next = (i + 1) % circle_points;
-        vec4 center = {0.0, 0.0, 0.0, 1.0};
+        int next = (i + 1) % circle_points; // next slice of circle
+        vec4 center = {0.0, 0.0, 0.0, 1.0}; // center of circle
 
         vec4 v1 = matrix_vector_multi(translate_top, matrix_vector_multi(align_to_z, matrix_vector_multi(scale, p[i])));
         vec4 v2 = matrix_vector_multi(translate_top, matrix_vector_multi(align_to_z, matrix_vector_multi(scale, p[next])));
         vec4 c  = matrix_vector_multi(translate_top, matrix_vector_multi(align_to_z, matrix_vector_multi(scale, center)));
 
+        // set vert values for triangles
         vertices[vert]   = c;
         vertices[vert+1] = v1;  // <--- reverse the winding
         vertices[vert+2] = v2;
@@ -342,6 +354,7 @@ void make_spring(void)
 
     // make spring body
 
+    // outer helix
     for(int i = 0; i < u_steps; i++)
     {
         float u1 = (2.0 * M_PI * turns * i) / u_steps;
@@ -350,31 +363,17 @@ void make_spring(void)
         float z1 = height * i / u_steps;       // height along spring
         float z2 = height * (i + 1) / u_steps;
 
+        // inner tube
         for(int j = 0; j < v_steps; j++)
         {
             float v1 = (2.0 * M_PI * j) / v_steps;
             float v2 = (2.0 * M_PI * (j + 1)) / v_steps;
 
             // 4 corners of quad on spring tube
-            vec4 p1 = { (R + r * cos(v1)) * cos(u1),
-                        (R + r * cos(v1)) * sin(u1),
-                        z1 + r * sin(v1),
-                        1.0 };
-
-            vec4 p2 = { (R + r * cos(v2)) * cos(u1),
-                        (R + r * cos(v2)) * sin(u1),
-                        z1 + r * sin(v2),
-                        1.0 };
-
-            vec4 p3 = { (R + r * cos(v2)) * cos(u2),
-                        (R + r * cos(v2)) * sin(u2),
-                        z2 + r * sin(v2),
-                        1.0 };
-
-            vec4 p4 = { (R + r * cos(v1)) * cos(u2),
-                        (R + r * cos(v1)) * sin(u2),
-                        z2 + r * sin(v1),
-                        1.0 };
+            vec4 p1 = { (R + r * cos(v1)) * cos(u1), (R + r * cos(v1)) * sin(u1), z1 + r * sin(v1), 1.0 };
+            vec4 p2 = { (R + r * cos(v2)) * cos(u1), (R + r * cos(v2)) * sin(u1), z1 + r * sin(v2), 1.0 };
+            vec4 p3 = { (R + r * cos(v2)) * cos(u2), (R + r * cos(v2)) * sin(u2), z2 + r * sin(v2), 1.0 };
+            vec4 p4 = { (R + r * cos(v1)) * cos(u2), (R + r * cos(v1)) * sin(u2), z2 + r * sin(v1), 1.0 };
 
             // first triangle
             vertices[vert]   = p1;
@@ -402,7 +401,9 @@ void make_spring(void)
             vert += 6;
         }
     }
+    // make the bottom and top caps
     num_vertices = make_ends_spring();
+    printf("%d", num_vertices);
 }
 
 // Zoom out
@@ -411,7 +412,7 @@ void make_shape_larger(void)
     // increment the scale value to up the radious of the stored object
     current_scale += 0.1;
     my_ctm = matrix_multi(my_ctm, matrix_scaling(1.1, 1.1, 1.1));
-    object_radius = current_scale;
+    object_radius = current_scale; // updates value to keep track of virtual circle for mouse boundry
 }
 
 // Zoom in
@@ -420,19 +421,21 @@ void make_shape_smaller(void)
     // decrease the scale value to up the radious of the stored object
     current_scale -= 0.1;
     my_ctm = matrix_multi(my_ctm, matrix_scaling(0.9, 0.9, 0.9));
-    object_radius = current_scale;
+    object_radius = current_scale; // updates value to keep track of virtual circle for mouse boundry
 }
 
 // swaps between open gl buffers, one for basic objects, other for stl objects
 void update_vertex_buffer()
 {
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    Mesh mesh = read_stl_binary("Little-darth-vader.STL");
+    //Mesh mesh = read_stl_binary("CL_whole.stl");
 
     // Stl
     if(stl_value == 1) 
     {
-        Mesh mesh = read_stl_binary("Little-darth-vader.STL");
-        normalize_mesh(&mesh);
+        normalize_mesh(&mesh); // normalizes mesh size to fit screen
+        mesh_num_verts = mesh.num_vertices;
         glBufferData(GL_ARRAY_BUFFER, sizeof(vec4) * mesh.num_vertices * 2, NULL, GL_STATIC_DRAW);
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vec4) * mesh.num_vertices, mesh.vertices);
         glBufferSubData(GL_ARRAY_BUFFER, sizeof(vec4) * mesh.num_vertices, sizeof(vec4) * mesh.num_vertices, mesh.colors);
@@ -440,6 +443,7 @@ void update_vertex_buffer()
     // basic objects
     else 
     {
+        free_mesh(&mesh); // clears mesh out of memory
         glBufferData(GL_ARRAY_BUFFER, sizeof(vertices) + sizeof(colors), NULL, GL_STATIC_DRAW);
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
         glBufferSubData(GL_ARRAY_BUFFER, sizeof(vertices), sizeof(colors), colors);
@@ -453,7 +457,6 @@ void update_vertex_buffer()
 // ---------------Open Gl Functions  --------------------------------------------------------------------------------- // 
 void init(void)
 {
-
     GLuint program = initShader("vshader.glsl", "fshader.glsl");
     glUseProgram(program);
 
@@ -470,7 +473,6 @@ void init(void)
     glEnableVertexAttribArray(vColor);
     glVertexAttribPointer(vColor, 4, GL_FLOAT, GL_FALSE, 0, (GLvoid *) sizeof(vertices));
 
-    //my_ctm = identity();
     ctm_location = glGetUniformLocation(program, "ctm");
 
     glEnable(GL_DEPTH_TEST);
@@ -487,7 +489,15 @@ void display(void)
 
     glUniformMatrix4fv(ctm_location, 1, GL_FALSE, (GLfloat *) &my_ctm);
 
-    glDrawArrays(GL_TRIANGLES, 0, num_vertices);
+    // check if basic object or stl file
+    if(stl_value == 1)
+    {
+        glDrawArrays(GL_TRIANGLES, 0, mesh_num_verts);
+    }
+    else
+    {
+        glDrawArrays(GL_TRIANGLES, 0, num_vertices);
+    }
 
     glutSwapBuffers();
 }
@@ -504,7 +514,7 @@ void keyboard(unsigned char key, int mousex, int mousey)
             make_shape_smaller();
             break;
 
-        case 'q':
+        case 'q': // quit application
             glutLeaveMainLoop();
             break;
 
@@ -540,7 +550,7 @@ void keyboard(unsigned char key, int mousex, int mousey)
 int is_pointer_on_object(float glx, float gly)
 {
     // where mouse is pointing
-    vec4 p_screen = (vec4){ glx, gly, 0.0f, 1.0f };
+    vec4 p_screen = (vec4){ glx, gly, 0.0, 1.0};
 
     // transform pointer into the object space: p_obj = inverse(my_ctm) * p_screen
     mat4 inv = matrix_inverse(my_ctm);
@@ -548,31 +558,39 @@ int is_pointer_on_object(float glx, float gly)
 
     // distance from origin in object space 
     // create a vec4 direction with w = 0 to compute magnitude
-    vec4 p_obj_dir = (vec4){ p_obj.x, p_obj.y, p_obj.z, 0.0f };
+    vec4 p_obj_dir = (vec4){ p_obj.x, p_obj.y, p_obj.z, 0.0};
     float dist = vec_Magnitude(p_obj_dir);
 
-    return (dist <= object_radius);
+    return (dist <= object_radius); // returns true if dist from origin is less than or equal to the object's radious
+                                    // otherwise false
 }
 
-// make a "virtual sphere" to aid in mouse location and motion
+// make a vector to aid in mouse location and motion
 vec4 project_to_sphere(float x, float y)
 {
+    // calculate vector values 
     float z;
-    float d = x * x + y * y;
-    if (d <= 1.0f)
-        z = sqrtf(1.0f - d);
-    else
+
+    // compute distance from center
+    // gives how far the pointer is from the center of the virtual sphere
+    float d = x * x + y * y; 
+
+    // only compute if pointer is within the sphere
+    if (d <= 1.0)
+        z = sqrtf(1.0 - d);
+    else // otherwise keep z 0
         z = 0.0f;
-    return (vec4){x, y, z, 0.0f};
+    return (vec4){x, y, z, 0.0};
 }
 
 // get the mouse location and input from user
 // then return a state based on the mouse pointer's location
 void mouse(int button, int state, int x, int y)
 {
-    float glx = (x / 400.0f) - 1.0f;
-    float gly = 1.0f - (y / 400.0f);
+    float glx = (x / 400.0) - 1.0;
+    float gly = 1.0 - (y / 400.0);
 
+    // makes sure left mouse button is pressed and is down
     if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
     {
         leftDown = 1;
@@ -582,7 +600,7 @@ void mouse(int button, int state, int x, int y)
     }
     else if (button == GLUT_LEFT_BUTTON && state == GLUT_UP)
     {
-        leftDown = 0;
+        leftDown = 0;  // sets bool down value if not currently pressed
     }
 
     glutPostRedisplay();
@@ -593,7 +611,7 @@ mat4 axis_angle_rotation(vec4 axis, float angle)
 {
     float c = cosf(angle);  // cos
     float s = sinf(angle);  // sin
-    float t = 1.0f - c;     // tan
+    float t = 1.0 - c;     // tan
 
     float x = axis.x;
     float y = axis.y;
@@ -602,10 +620,10 @@ mat4 axis_angle_rotation(vec4 axis, float angle)
     mat4 m;  // generic mat4
 
     // calculate the arbitrary matrix coordinates with cos, sin, tan of provided angle
-    m.x = (vec4){t*x*x + c,     t*x*y - s*z,   t*x*z + s*y,   0.0f}; 
-    m.y = (vec4){t*x*y + s*z,   t*y*y + c,     t*y*z - s*x,   0.0f};
-    m.z = (vec4){t*x*z - s*y,   t*y*z + s*x,   t*z*z + c,     0.0f};
-    m.w = (vec4){0.0f,          0.0f,          0.0f,          1.0f}; // just assigns this struct as a mat4 (0) instead of a point(1)
+    m.x = (vec4){t*x*x + c,     t*x*y - s*z,   t*x*z + s*y,   0.0}; 
+    m.y = (vec4){t*x*y + s*z,   t*y*y + c,     t*y*z - s*x,   0.0};
+    m.z = (vec4){t*x*z - s*y,   t*y*z + s*x,   t*z*z + c,     0.0};
+    m.w = (vec4){0.0,           0.0,           0.0,           1.0}; // just assigns this struct as a mat4 (0) instead of a point(1)
 
     return m; // returns the arbitrary matrix 
 }
@@ -645,13 +663,13 @@ void motion(int x, int y)
     // gets the angle of the two vectors using the inverse 
     // angle = arccos(dot(v1,v2))
     float dot = vec_Dot_product(v1, v2);
-    if (dot > 1.0f) 
+    if (dot > 1.0) 
     {
-        dot = 1.0f;
+        dot = 1.0;
     }
-    if (dot < -1.0f) 
+    if (dot < -1.0) 
     {
-        dot = -1.0f;
+        dot = -1.0;
     }
     float angle = acosf(dot);
 
@@ -677,7 +695,6 @@ int main(int argc, char **argv)
     glutInitWindowSize(800, 800);
     glutInitWindowPosition(100,100);
     glutCreateWindow("Project 1");
-
     glewInit();
     init();
     glutDisplayFunc(display);

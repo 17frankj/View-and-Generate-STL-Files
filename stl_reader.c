@@ -42,7 +42,7 @@ Mesh read_stl_binary(const char *filename) {
 
         float v[3][3];
         fread(v, sizeof(float), 9, file); // 3 vertices
-
+        
         for(int j = 0; j < 3; j++) {
             mesh.vertices[mesh.num_vertices] = (vec4){ v[j][0], v[j][1], v[j][2], 1.0f };
             mesh.colors[mesh.num_vertices] = random_color();
@@ -58,6 +58,7 @@ Mesh read_stl_binary(const char *filename) {
     return mesh;
 }
 
+/*
 // Optional: normalize mesh to fit in [-1,1] canonical view
 void normalize_mesh(Mesh *mesh) {
     float min_x = 1e30f, min_y = 1e30f, min_z = 1e30f;
@@ -83,7 +84,37 @@ void normalize_mesh(Mesh *mesh) {
         mesh->vertices[i].z = (mesh->vertices[i].z - center_z) * scale;
     }
 }
+*/
+void normalize_mesh(Mesh *mesh) {
+    float min_x = 1e30f, min_y = 1e30f, min_z = 1e30f;
+    float max_x = -1e30f, max_y = -1e30f, max_z = -1e30f;
 
+    // find bounding box
+    for (int i = 0; i < mesh->num_vertices; i++) {
+        vec4 v = mesh->vertices[i];
+        if (v.x < min_x) min_x = v.x; if (v.x > max_x) max_x = v.x;
+        if (v.y < min_y) min_y = v.y; if (v.y > max_y) max_y = v.y;
+        if (v.z < min_z) min_z = v.z; if (v.z > max_z) max_z = v.z;
+    }
+
+    // compute center
+    float center_x = (min_x + max_x) * 0.5f;
+    float center_y = (min_y + max_y) * 0.5f;
+    float center_z = (min_z + max_z) * 0.5f;
+
+    // scale by *half-size* of the largest dimension
+    float max_dim = fmaxf(max_x - min_x, fmaxf(max_y - min_y, max_z - min_z));
+    float scale = 1.0f / (max_dim * 0.5f); // fills roughly [-1,1] in all axes
+
+    // normalize and flip z if needed
+    for (int i = 0; i < mesh->num_vertices; i++) {
+        mesh->vertices[i].x = (mesh->vertices[i].x - center_x) * scale;
+        mesh->vertices[i].y = (mesh->vertices[i].y - center_y) * scale;
+        mesh->vertices[i].z = (mesh->vertices[i].z - center_z) * scale;
+        // If model appears inverted in depth, try flipping z:
+        //mesh->vertices[i].z = -(mesh->vertices[i].z - center_z) * scale;
+    }
+}
 // Free mesh memory
 void free_mesh(Mesh *mesh) {
     if(mesh->vertices) free(mesh->vertices);
