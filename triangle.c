@@ -56,10 +56,9 @@ GLuint vbo;
 
 // msc global variables
 int stl_value = 0;
+float current_scale = 1;
 float large_scale_value = 1.1;
-int made_larger = 0;
 float small_scale_value = 0.9;
-int made_smaller = 0;
 float object_radius = 1.0f;
 
 // mouse/ motion global variables
@@ -409,21 +408,19 @@ void make_spring(void)
 // Zoom out
 void make_shape_larger(void)
 {
-    my_ctm = matrix_scaling(large_scale_value, large_scale_value, large_scale_value);
-    small_scale_value = large_scale_value;
-    object_radius = large_scale_value;
-    large_scale_value += 0.1;
-    made_smaller = 0;
+    // increment the scale value to up the radious of the stored object
+    current_scale += 0.1;
+    my_ctm = matrix_multi(my_ctm, matrix_scaling(1.1, 1.1, 1.1));
+    object_radius = current_scale;
 }
 
 // Zoom in
 void make_shape_smaller(void)
 {
-    my_ctm = matrix_scaling(small_scale_value, small_scale_value, small_scale_value);
-    large_scale_value = small_scale_value;
-    object_radius = small_scale_value+0.6;
-    small_scale_value -= 0.1;
-    made_larger = 0;
+    // decrease the scale value to up the radious of the stored object
+    current_scale -= 0.1;
+    my_ctm = matrix_multi(my_ctm, matrix_scaling(0.9, 0.9, 0.9));
+    object_radius = current_scale;
 }
 
 // swaps between open gl buffers, one for basic objects, other for stl objects
@@ -500,12 +497,10 @@ void keyboard(unsigned char key, int mousex, int mousey)
     switch(key)
     {
         case 'e': // enlarge
-            made_larger = 1;
             make_shape_larger();
             break;
 
         case 'r': // reduce
-            made_smaller = 1;
             make_shape_smaller();
             break;
 
