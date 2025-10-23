@@ -1,3 +1,13 @@
+/*
+ * myLib.c
+ *
+ * 
+ *  Linear Algebra Library: Created on: September 15, 2025
+ *      Author: Joshua Frank
+ * 
+ * 
+ * 
+ */
 #define _USE_MATH_DEFINES
 #include "myLib.h"
 #include <stdio.h>

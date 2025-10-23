@@ -1,13 +1,7 @@
 LIBS = -lXi -lXmu -lglut -lGLEW -lGLU -lm -lGL
 
-main: main.c myLib.o
-	gcc -o main main.c myLib.o -lm
-
-triangle: triangle.c initShader.o myLib.o stl_reader.o
-	gcc -o triangle triangle.c initShader.o myLib.o stl_reader.o $(LIBS)
-
-triangle_ctm: triangle_ctm.c initShader.o
-	gcc -o triangle_ctm triangle_ctm.c initShader.o $(LIBS)
+shapes: make_shapes.c initShader.o myLib.o stl_reader.o
+	gcc -o shapes make_shapes.c initShader.o myLib.o stl_reader.o $(LIBS)
 
 initShader.o: initShader.c initShader.h
 	gcc -c initShader.c

@@ -1,3 +1,13 @@
+/*
+ * stl_reader.h
+ *
+ * 
+ *  CS1566 Project 1 Transformations: Created on: Octobor 15, 2025
+ *      Author: Joshua Frank
+ * 
+ * 
+ *  ------------ made with Open Ai Chat Gpt
+ */
 #ifndef _STL_READER_H_
 
 #define _STL_READER_H_

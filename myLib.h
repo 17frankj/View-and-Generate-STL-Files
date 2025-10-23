@@ -1,3 +1,13 @@
+/*
+ * myLib.h
+ *
+ * 
+ *  Linear Algebra Library: Created on: September 15, 2025
+ *      Author: Joshua Frank
+ * 
+ * 
+ * 
+ */
 #ifndef _MYLIB_H_
 
 #define _MYLIB_H_
