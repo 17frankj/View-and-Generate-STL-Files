@@ -139,7 +139,7 @@ void make_Sphere(void)
     int lat_steps = 36;  // full sphere from -90 to +90 in 10° increments
     int lon_steps = 36;  // full 360° in 10° increments
 
-    // latitudes: -80 to +70 (15 steps of 10)
+    // latitudes: -80 to +70 (36 steps of 10)
     for(int lat = 0; lat < lat_steps; lat++)
     {
         float x1 = -80 + lat * 10;   // current band
@@ -267,8 +267,8 @@ int make_ends_spring(void)
 
     // Circle lies in XY plane, and centered at origin
     mat4 scale = matrix_scaling(r, r, 1.0);
-    mat4 translate_bottom = matrix_translation(R, 0.0, 0.0);
-    mat4 translate_top = matrix_translation(R, 0.0, height);
+    mat4 translate_bottom = matrix_translation(R, 0.0, 0.0); // mat4 translation for bottom end cap
+    mat4 translate_top = matrix_translation(R, 0.0, height); // mat4 translation for top end cap
 
     mat4 align_to_z = rotate_x(270.0);  // rotate circle from XY to YZ plane
 
@@ -323,8 +323,8 @@ int make_ends_spring(void)
 
         // set vert values for triangles
         vertices[vert]   = c;
-        vertices[vert+1] = v1;  // <--- reverse the winding
-        vertices[vert+2] = v2;
+        vertices[vert+1] = v1;  // reverses the winding
+        vertices[vert+2] = v2;  // v1 <-> v2
 
         int random1 = 1 + rand() % 10;
         int random2 = 1 + rand() % 10;
@@ -411,18 +411,18 @@ void make_spring(void)
 void make_shape_larger(void)
 {
     // increment the scale value to up the radious of the stored object
-    current_scale += 0.1;
+    //current_scale += 1;
     my_ctm = matrix_multi(my_ctm, matrix_scaling(1.1, 1.1, 1.1));
-    object_radius = current_scale; // updates value to keep track of virtual circle for mouse boundry
+    //object_radius = current_scale; // updates value to keep track of virtual circle for mouse boundry
 }
 
 // Zoom in
 void make_shape_smaller(void)
 {
-    // decrease the scale value to up the radious of the stored object
-    current_scale -= 0.1;
+    // decrease the scale value to lower the radious of the stored object
+    //current_scale -= 1;
     my_ctm = matrix_multi(my_ctm, matrix_scaling(0.9, 0.9, 0.9));
-    object_radius = current_scale; // updates value to keep track of virtual circle for mouse boundry
+    //object_radius = current_scale; // updates value to keep track of virtual circle for mouse boundry
 }
 
 // swaps between open gl buffers, one for basic objects, other for stl objects
@@ -430,14 +430,15 @@ void update_vertex_buffer()
 {
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     // printf("proccessing: %s", (given_stl));
-    const char* filename = given_stl;    // get user provided filename for stl
-    Mesh mesh = read_stl_binary(filename);
-    normalize_mesh(&mesh); // normalizes mesh size to fit screen
-    mesh_num_verts = mesh.num_vertices; // gives memory size for buffer
 
     // Stl
     if(stl_value == 1) 
     {
+        const char* filename = given_stl;    // get user provided filename for stl
+        Mesh mesh = read_stl_binary(filename);
+        normalize_mesh(&mesh); // normalizes mesh size to fit screen
+        mesh_num_verts = mesh.num_vertices; // gives memory size for buffer
+
         //printf("%d", mesh_num_verts);
         glBufferData(GL_ARRAY_BUFFER, sizeof(vec4) * mesh.num_vertices * 2, NULL, GL_STATIC_DRAW);
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vec4) * mesh.num_vertices, mesh.vertices);
@@ -446,7 +447,6 @@ void update_vertex_buffer()
     // basic objects
     else 
     {
-        free_mesh(&mesh); // clears mesh out of memory
         glBufferData(GL_ARRAY_BUFFER, sizeof(vertices) + sizeof(colors), NULL, GL_STATIC_DRAW);
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
         glBufferSubData(GL_ARRAY_BUFFER, sizeof(vertices), sizeof(colors), colors);
@@ -461,7 +461,6 @@ void update_vertex_buffer()
 // ---------------Open Gl Functions  --------------------------------------------------------------------------------- // 
 void init(void)
 {
-    // set sizes for verts from STL before drawing
     my_ctm = identity(); // clear garbage in memory
 
     GLuint program = initShader("vshader.glsl", "fshader.glsl");
@@ -485,7 +484,7 @@ void init(void)
     GLuint vColor = glGetAttribLocation(program, "vColor");
     glEnableVertexAttribArray(vColor);  
 
-    if(stl_value == 0)  // check if stl is being loaded // if it is then do basic shape render
+    if(stl_value == 0)  // check if stl is being loaded // if its not then do basic shape render
     {
         glVertexAttribPointer(vColor, 4, GL_FLOAT, GL_FALSE, 0, (GLvoid *) sizeof(vertices));
     }
@@ -566,7 +565,8 @@ void keyboard(unsigned char key, int mousex, int mousey)
     glutPostRedisplay();
 }
 
-// return 1 if pointer at (glx,gly) is over the object
+// helper method
+// return true if pointer at (glx,gly) is over the object
 // i.e the mouse is "out of bounds"
 int is_pointer_on_object(float glx, float gly)
 {
@@ -586,10 +586,12 @@ int is_pointer_on_object(float glx, float gly)
                                     // otherwise false
 }
 
+// helper method 
 // make a vector to aid in mouse location and motion
 vec4 project_to_sphere(float x, float y)
 {
     // calculate vector values 
+
     float z;
 
     // compute distance from center
@@ -604,10 +606,35 @@ vec4 project_to_sphere(float x, float y)
     return (vec4){x, y, z, 0.0};
 }
 
+// helper method 
+// find a matrix from an arbitrary angle
+mat4 axis_angle_rotation(vec4 axis, float angle)
+{
+    float c = cosf(angle);  // cos
+    float s = sinf(angle);  // sin
+    float t = 1.0 - c;     // tan
+
+    // simplify given vec4 names
+    float x = axis.x;
+    float y = axis.y;
+    float z = axis.z;
+
+    mat4 m;  // generic mat4
+
+    // calculate the arbitrary matrix coordinates with cos, sin, tan of provided angle
+    m.x = (vec4){t*x*x + c,     t*x*y - s*z,   t*x*z + s*y,   0.0}; 
+    m.y = (vec4){t*x*y + s*z,   t*y*y + c,     t*y*z - s*x,   0.0};
+    m.z = (vec4){t*x*z - s*y,   t*y*z + s*x,   t*z*z + c,     0.0};
+    m.w = (vec4){0.0,           0.0,           0.0,           1.0}; // just assigns this struct as a mat4 (0) instead of a point(1)
+
+    return m; // returns the arbitrary matrix 
+}
+
 // get the mouse location and input from user
 // then return a state based on the mouse pointer's location
 void mouse(int button, int state, int x, int y)
 {
+    // derives x any y from screen coords
     float glx = (x / 400.0) - 1.0;
     float gly = 1.0 - (y / 400.0);
 
@@ -623,30 +650,7 @@ void mouse(int button, int state, int x, int y)
     {
         leftDown = 0;  // sets bool down value if not currently pressed
     }
-
     glutPostRedisplay();
-}
-
-// find a matrix from an arbitrary angle
-mat4 axis_angle_rotation(vec4 axis, float angle)
-{
-    float c = cosf(angle);  // cos
-    float s = sinf(angle);  // sin
-    float t = 1.0 - c;     // tan
-
-    float x = axis.x;
-    float y = axis.y;
-    float z = axis.z;
-
-    mat4 m;  // generic mat4
-
-    // calculate the arbitrary matrix coordinates with cos, sin, tan of provided angle
-    m.x = (vec4){t*x*x + c,     t*x*y - s*z,   t*x*z + s*y,   0.0}; 
-    m.y = (vec4){t*x*y + s*z,   t*y*y + c,     t*y*z - s*x,   0.0};
-    m.z = (vec4){t*x*z - s*y,   t*y*z + s*x,   t*z*z + c,     0.0};
-    m.w = (vec4){0.0,           0.0,           0.0,           1.0}; // just assigns this struct as a mat4 (0) instead of a point(1)
-
-    return m; // returns the arbitrary matrix 
 }
 
 // calculates object location based on the users actions
@@ -708,21 +712,27 @@ void motion(int x, int y)
 
 // ------------------------- end open Gl Functions --------------------------------------------------------------------------------- //
 
+
+
 // ------------------------ MSC Functions ------------------------------------------------------------------------------------------ //
 
 // checks if user's file ext matches stl
-int has_extension(const char *filename, const char *ext) {
-    const char *dot = strrchr(filename, '.');
+int has_extension(const char *filename, const char *ext) 
+{
+    const char *dot = strrchr(filename, '.'); // goes to last charcter in string thats .
     if (!dot || dot == filename) return 0;
 
     // compare case-insensitively
-    while (*dot && *ext) {
+    while (*dot && *ext) 
+    {
         if (tolower((unsigned char)*dot) != tolower((unsigned char)*ext))
+        {
             return 0;
+        }
         dot++;
         ext++;
     }
-    return *dot == '\0' && *ext == '\0';
+    return *dot == '\0' && *ext == '\0'; // only return true if dot  is \0 and ext is \0
 }
 
 // basic selection menu for shapes
@@ -740,7 +750,7 @@ void menu(void)
     {
         stl_value = 1;
         free(given_stl); // clean up junk in memory
-        given_stl = strdup(line);
+        given_stl = strdup(line); // gives safe value from line
         printf("what you typed: %s\n", given_stl);
         printf("    to exit Press q\n");
     }
