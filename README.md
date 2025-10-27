@@ -7,8 +7,8 @@
 
 
 ### How to Run: type make shapes
-###             then ./shapes
-###             instructions in terminal window
+###             then: ./shapes
+
 ### Needed to Run: Linux on Windows, Ubuntu
 
   
